@@ -1,11 +1,5 @@
-[package]
-name = "rstracer"
-version = "0.1.0"
-edition = "2021"
+[workspace]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
-chrono = "0.4.38"
-polars = {  version = "0.41.3", features = ["lazy", "parquet"] }
-procfs = "0.16.0"
+members = [
+    "rsps",
+]
