@@ -40,7 +40,7 @@ pub trait Ps {
     }
 }
 
-pub fn rsps() -> Result<Vec<Process>, Error> {
+pub fn ps() -> Result<Vec<Process>, Error> {
     if ["linux", "macos", "android", "ios"].contains(&consts::OS) {
         Unix::exec()
     } else {

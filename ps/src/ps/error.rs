@@ -5,7 +5,7 @@ use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("rsps is not implemented for OS {os:} with architecture {arch:}.")]
+    #[error("ps is not implemented for OS {os:} with architecture {arch:}.")]
     Unimplemented { os: String, arch: String },
     #[error("Error parsing date: {0}")]
     ParseDate(#[from] chrono::ParseError),

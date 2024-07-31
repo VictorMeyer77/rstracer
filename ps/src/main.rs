@@ -1,7 +1,7 @@
-use rsps::ps::{rsps, Process};
+use ps::ps::{ps, Process};
 
 pub fn main() {
-    display(rsps().unwrap())
+    display(ps().unwrap())
 }
 
 fn display(processes: Vec<Process>) {

@@ -1,4 +1,4 @@
-# rsps
+# lsof
 
 |         | linux | windows | macos | android | ios |
 |---------|-------|---------|-------|---------|-----|

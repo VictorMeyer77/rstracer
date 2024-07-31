@@ -1,6 +1,6 @@
 [workspace]
 
 members = [
-    "rsps",
+    "ps",
     "lsof"
 ]
