@@ -38,7 +38,7 @@ fn split_process_per_rows(of_per_process: &str) -> Vec<String> {
 
 fn deserialize_header(header: &str) -> Result<(u32, u32, String), Error> {
     let headers: Vec<&str> = header.lines().collect();
-    let pid: u32 = headers[0].replace("p", "").parse()?;
+    let pid: u32 = headers[0].replace('p', "").parse()?;
     let uid: u32 = headers[2][1..].parse()?;
     let command: String = headers[1][1..].to_string();
     Ok((pid, uid, command))

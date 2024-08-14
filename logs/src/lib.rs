@@ -9,15 +9,13 @@ use tokio::sync::mpsc::Sender;
 
 pub mod error;
 
-const LINUX_LOG_FILES: &'static [&str] = &["/var/log/system.log"];
+const LINUX_LOG_FILES: &[&str] = &["/var/log/system.log"];
 
-const MACOS_LOG_FILES: &'static [&str] = &[
+const MACOS_LOG_FILES: &[&str] = &[
     "/var/log/system.log",
     "/Users/victormeyer/Library/Logs/JetBrains/RustRover2024.1/idea.log",
     "todo",
 ];
-
-const TEST_LOG_FILE: &str = "test.txt";
 
 #[derive(Debug)]
 pub struct Log {
@@ -61,7 +59,7 @@ pub async fn producer(sender: Sender<Log>, stop_flag: Arc<AtomicBool>) -> Result
 
 #[cfg(test)]
 mod tests {
-    use crate::{producer, Log, TEST_LOG_FILE};
+    use crate::{producer, Log};
     use std::env;
     use std::path::Path;
     use std::sync::atomic::{AtomicBool, Ordering};
@@ -72,6 +70,8 @@ mod tests {
     use tokio::sync::mpsc::{channel, Receiver, Sender};
     use tokio::task;
     use tokio::time::sleep;
+
+    const TEST_LOG_FILE: &str = "test.txt";
 
     fn set_test_env() {
         env::set_var("RUST_TEST_LOGS", "true");
