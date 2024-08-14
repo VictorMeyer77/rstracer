@@ -1,0 +1,10 @@
+[package]
+name = "logs"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4.38"
+linemux = "0.3.0"
+thiserror = "1.0.63"
+tokio = { version = "1.39.2", features = ["rt", "rt-multi-thread", "macros"] }

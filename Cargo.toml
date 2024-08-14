@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "logs",
     "lsof",
     "ps",
 ]

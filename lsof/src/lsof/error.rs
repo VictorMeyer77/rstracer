@@ -6,7 +6,7 @@ use thiserror::Error;
 pub enum Error {
     #[error("lsof is not implemented for OS {os:} with architecture {arch:}.")]
     Unimplemented { os: String, arch: String },
-    #[error("")]
+    #[error("Error parsing row: {row:}")]
     ParseRow { row: String },
     #[error("Error parsing integer: {0}")]
     ParseInt(#[from] num::ParseIntError),
