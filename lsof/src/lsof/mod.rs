@@ -63,7 +63,6 @@ pub async fn producer(
 #[cfg(test)]
 mod tests {
     use crate::lsof::{producer, OpenFile};
-    use std::env::consts;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -72,10 +71,6 @@ mod tests {
 
     #[tokio::test]
     async fn producer_integration_test() {
-        if "linux" != consts::OS {
-            return;
-        }
-
         let (sender, mut receiver): (Sender<OpenFile>, Receiver<OpenFile>) = channel(100);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
