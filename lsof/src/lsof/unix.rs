@@ -1,5 +1,6 @@
 use crate::lsof::error::Error;
 use crate::lsof::{Lsof, OpenFile};
+use chrono::Local;
 use log::warn;
 use std::process::{Command, Output};
 
@@ -81,6 +82,7 @@ fn row_to_struct(header: &(u32, u32, String), row: &str) -> Result<OpenFile, Err
             size,
             node,
             name,
+            date_exec: Local::now().timestamp_micros(),
         })
     }
 }
