@@ -5,7 +5,7 @@ use tokio::sync::mpsc::error::SendError;
 
 #[derive(Error, Debug)]
 pub enum Error {
-    #[error("lsof is not implemented for OS {os:}.")]
+    #[error("logs is not implemented for OS {os:}.")]
     Unimplemented { os: String },
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
