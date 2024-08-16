@@ -45,6 +45,7 @@ async fn set_log_files(lines: &mut MuxedLines) -> Result<(), Error> {
         match consts::OS {
             "linux" => Ok(LINUX_LOG_FILES),
             "macos" => Ok(MACOS_LOG_FILES),
+            "windows" => Ok(WINDOWS_LOG_FILES),
             _ => Err(Error::Unimplemented {
                 os: consts::OS.to_string(),
             }),
@@ -77,6 +78,7 @@ pub async fn producer(sender: Sender<Log>, stop_flag: Arc<AtomicBool>) -> Result
 mod tests {
     use crate::{producer, set_log_files, Log, TEST_LOG_FILES};
     use linemux::MuxedLines;
+    use std::fs::File;
     use std::path::Path;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
@@ -104,20 +106,21 @@ mod tests {
     #[tokio::test]
     async fn producer_integration_test() {
         set_test_env();
+        File::create(TEST_LOG_FILES[0]).unwrap();
         let (sender, mut receiver): (Sender<Log>, Receiver<Log>) = channel(100);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
 
-        task::spawn(async move { producer(sender, stop_flag_clone).await });
+        task::spawn(async move { producer(sender, stop_flag_clone).await.unwrap() });
         task::spawn(async {
             let mut file = OpenOptions::new()
                 .append(true)
-                .create(true)
                 .open(TEST_LOG_FILES[0])
                 .await
                 .unwrap();
             sleep(Duration::from_secs(1)).await;
             file.write_all(b"row test\n").await.unwrap();
+            file.flush().await.unwrap();
         });
         let received = receiver.recv().await.unwrap();
 
