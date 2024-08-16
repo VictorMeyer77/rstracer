@@ -120,7 +120,6 @@ mod tests {
                 .unwrap();
             sleep(Duration::from_secs(1)).await;
             file.write_all(b"row test\n").await.unwrap();
-            file.flush().await.unwrap();
         });
         let received = receiver.recv().await.unwrap();
 
