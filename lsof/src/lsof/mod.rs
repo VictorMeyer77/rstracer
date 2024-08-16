@@ -51,7 +51,9 @@ pub async fn producer(
 ) -> Result<(), Error> {
     while !stop_flag.load(Ordering::Relaxed) {
         for file in lsof()? {
-            sender.send(file).await?;
+            if let Err(e) = sender.send(file).await {
+                return Err(Error::Channel(Box::new(e)));
+            }
         }
         sleep(Duration::from_secs(frequency_secs)).await;
     }
@@ -61,6 +63,7 @@ pub async fn producer(
 #[cfg(test)]
 mod tests {
     use crate::lsof::{producer, OpenFile};
+    use std::env::consts;
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
@@ -69,6 +72,10 @@ mod tests {
 
     #[tokio::test]
     async fn producer_integration_test() {
+        if "linux" != consts::OS {
+            return;
+        }
+
         let (sender, mut receiver): (Sender<OpenFile>, Receiver<OpenFile>) = channel(100);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();

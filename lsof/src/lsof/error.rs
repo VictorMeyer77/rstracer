@@ -17,5 +17,5 @@ pub enum Error {
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
     #[error("Channel error: {0}")]
-    Channel(#[from] SendError<OpenFile>),
+    Channel(#[from] Box<SendError<OpenFile>>),
 }
