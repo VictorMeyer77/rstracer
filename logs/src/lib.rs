@@ -25,12 +25,15 @@ const LINUX_LOG_FILES: &[&str] = &[
     "/var/log/kern.log",
 ];
 
-const MACOS_LOG_FILES: &[&str] = &["TODO"];
+// TODO: add macos log files
+const MACOS_LOG_FILES: &[&str] = &[];
 
-const WINDOWS_LOG_FILES: &[&str] = &["TODO"];
+// TODO: add windows log files
+const WINDOWS_LOG_FILES: &[&str] = &[];
 
 const TEST_LOG_FILES: &[&str] = &["file0.txt", "file1.txt"];
 
+// TODO: add schema to log for parsing
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Log {
     pub file: String,
@@ -60,6 +63,8 @@ async fn set_log_files(lines: &mut MuxedLines) -> Result<(), Error> {
 pub async fn producer(sender: Sender<Log>, stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let mut lines = MuxedLines::new()?;
     set_log_files(&mut lines).await?;
+    // Stop flag is checked after each "next_line".
+    // To stop properly, a new line should be parsed after set stop_flag to false.
     while !stop_flag.load(Ordering::Relaxed) {
         if let Ok(Some(line)) = lines.next_line().await {
             sender
@@ -87,8 +92,8 @@ mod tests {
     use tokio::fs::OpenOptions;
     use tokio::io::AsyncWriteExt;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
-    use tokio::task;
     use tokio::time::sleep;
+    use tokio::{join, task};
 
     fn set_test_env() {
         env::set_var("RUST_TEST_LOGS", "true");
@@ -111,29 +116,43 @@ mod tests {
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
 
-        task::spawn(async move { producer(sender, stop_flag_clone).await.unwrap() });
-        task::spawn(async {
+        let producer_task =
+            task::spawn(async move { producer(sender, stop_flag_clone).await.unwrap() });
+        let write_file_task = task::spawn(async move {
             let mut file = OpenOptions::new()
                 .append(true)
                 .open(TEST_LOG_FILES[0])
                 .await
                 .unwrap();
+            file.write_all(b"row 0\nrow 1\nrow 2\nrow 3\n")
+                .await
+                .unwrap();
             sleep(Duration::from_secs(1)).await;
-            file.write_all(b"row test\n").await.unwrap();
+            stop_flag.store(true, Ordering::Release);
+            sleep(Duration::from_secs(1)).await;
+            file.write_all(b"row 4\n").await.unwrap();
         });
-        let received = receiver.recv().await.unwrap();
 
+        let mut logs: Vec<Log> = vec![];
+        while let Some(log) = receiver.recv().await {
+            logs.push(log);
+        }
+
+        let (producer_task_result, write_file_task_result) = join!(producer_task, write_file_task);
+        producer_task_result.unwrap();
+        write_file_task_result.unwrap();
+
+        assert_eq!(logs.len(), 5);
         assert_eq!(
-            received.file,
+            logs.last().unwrap().file,
             Path::new(TEST_LOG_FILES[0])
                 .canonicalize()
                 .unwrap()
                 .to_str()
                 .unwrap()
         );
-        assert_eq!(received.row, "row test");
+        assert_eq!(logs.last().unwrap().row, "row 4");
 
-        stop_flag.store(true, Ordering::Release);
         fs::remove_file(TEST_LOG_FILES[0]).unwrap();
     }
 }
