@@ -8,7 +8,9 @@ pub struct Unix;
 
 impl Lsof for Unix {
     fn os_command() -> Result<Output, Error> {
-        Ok(Command::new("lsof").args(["-F", "pcuftDsin"]).output()?)
+        Ok(Command::new("lsof")
+            .args(["-b", "-F", "pcuftDsin"])
+            .output()?)
     }
 
     fn parse_output(output: &str) -> Result<Vec<OpenFile>, Error> {

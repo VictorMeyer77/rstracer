@@ -10,6 +10,8 @@ use tokio::time::{sleep, Duration};
 pub mod error;
 pub mod unix;
 
+// TODO: implement windows
+
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct OpenFile {
     pub command: String, // Command
@@ -71,7 +73,7 @@ mod tests {
 
     #[tokio::test]
     async fn producer_integration_test() {
-        let (sender, mut receiver): (Sender<OpenFile>, Receiver<OpenFile>) = channel(100);
+        let (sender, mut receiver): (Sender<OpenFile>, Receiver<OpenFile>) = channel(256);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
 
@@ -84,16 +86,16 @@ mod tests {
             stop_flag.store(true, Ordering::Release);
         });
 
-        let mut tmp: Vec<OpenFile> = vec![];
+        let mut files: Vec<OpenFile> = vec![];
         while let Some(file) = receiver.recv().await {
-            tmp.push(file);
+            files.push(file);
         }
 
         let (producer_task_result, stop_task_result) = join!(producer_task, stop_task);
         producer_task_result.unwrap();
         stop_task_result.unwrap();
 
-        assert!(tmp.len() > 1000);
-        assert_eq!(tmp.last().unwrap().command, "lsof");
+        assert!(files.len() > 1000);
+        assert_eq!(files.last().unwrap().command, "lsof");
     }
 }
