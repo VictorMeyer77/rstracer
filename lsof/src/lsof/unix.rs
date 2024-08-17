@@ -104,4 +104,6 @@ mod tests {
             assert_eq!(files.last().unwrap().command, "lsof")
         }
     }
+
+    // TODO: write unit tests
 }
