@@ -1,6 +1,6 @@
 use crate::ps::error::Error;
 use crate::ps::{Process, Ps};
-use chrono::NaiveDateTime;
+use chrono::{Local, NaiveDateTime};
 use std::process::{Command, Output};
 
 pub struct Unix;
@@ -23,6 +23,7 @@ impl Ps for Unix {
             pmem: chunks[9].parse()?,
             status: chunks[10].to_string(),
             command: chunks[11..].join(" "),
+            date_exec: Local::now().timestamp_micros(),
         })
     }
 
@@ -44,7 +45,7 @@ mod tests {
 
     #[test]
     fn unix_integration_test() {
-        if ["linux", "macos", "android", "ios"].contains(&consts::OS) {
+        if ["linux", "macos"].contains(&consts::OS) {
             let processes = Unix::exec().unwrap();
             assert!(processes.len() > 10);
             assert_eq!(
@@ -53,4 +54,6 @@ mod tests {
             )
         }
     }
+
+    // TODO: write unit tests
 }
