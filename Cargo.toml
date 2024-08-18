@@ -3,5 +3,6 @@
 members = [
     "logs",
     "lsof",
+    "network",
     "ps",
 ]
