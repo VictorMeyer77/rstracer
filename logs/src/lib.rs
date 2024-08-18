@@ -95,6 +95,7 @@ mod tests {
     use tokio::time::sleep;
     use tokio::{join, task};
 
+    // TODO: replace with arg funct
     fn set_test_env() {
         env::set_var("RUST_TEST_LOGS", "true");
     }
