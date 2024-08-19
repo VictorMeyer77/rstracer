@@ -1,7 +1,8 @@
-use network::error::Error;
+use log::warn;
+
 use network::osi;
 use network::osi::data_link::DataLinkProtocol;
-use network::osi::network::{Network, NetworkProtocol};
+use network::osi::network::{NetworkProtocol};
 use pcap::Device;
 use pnet::packet::dns::DnsPacket;
 use pnet::packet::ethernet::EthernetPacket;
@@ -15,47 +16,73 @@ use pnet::packet::Packet;
 // todo gerer device
 
 fn main() {
+    env_logger::init();
+
+    warn!("test");
+
     let mut cap = Device::lookup().unwrap().unwrap().open().unwrap();
 
     let dev = Device::list().unwrap();
 
-    println!("{:?}", dev);
+    // println!("{:?}", dev);
 
     let main_device = Device::lookup().unwrap().unwrap();
 
-    println!("{:?}", main_device);
+    // println!("{:?}", main_device);
 
     while let Ok(packet) = cap.next_packet() {
         // Layer 2: data link
 
-        let data_link_packet = osi::data_link::read_packet(packet.data).unwrap();
+        let data_link_packet = osi::data_link::read_packet(packet.data);
 
         match data_link_packet.protocol {
             DataLinkProtocol::Ethernet => {
                 //println!("ethernet pac! {:?}", data_link_packet.ethernet);
 
-                let network_packet = osi::network::read_data_link_packet(&data_link_packet);
+                let network_packet = osi::network::read_packet(&data_link_packet);
 
                 //println!("{:?} {:?}", network_packet.ip, network_packet.protocol);
 
                 match network_packet.protocol {
                     NetworkProtocol::Arp => {
-                        //println!("{:?} ### {:?}", network_packet.protocol, network_packet.arp.unwrap());
+                        println!(
+                            "{:?} ### {:?}",
+                            network_packet.protocol,
+                            network_packet.arp.unwrap()
+                        );
                     }
                     NetworkProtocol::IcmpIpv4 => {
-                        println!("{:?} ### {:?} ### {:?}", network_packet.protocol, network_packet.ip.unwrap(), network_packet.icmp);
+                        println!(
+                            "{:?} ### {:?} ### {:?}",
+                            network_packet.protocol,
+                            network_packet.ip.unwrap(),
+                            network_packet.icmp
+                        );
                     }
                     NetworkProtocol::Ipv4 => {
-                        println!("{:?} ### {:?}", network_packet.protocol, network_packet.ip.unwrap());
+                        println!(
+                            "{:?} ### {:?}",
+                            network_packet.protocol,
+                            network_packet.ip.unwrap()
+                        );
                     }
                     NetworkProtocol::Ipv6 => {
-                        println!("{:?} ### {:?}", network_packet.protocol, network_packet.ip.unwrap());
+                        println!(
+                            "{:?} ### {:?}",
+                            network_packet.protocol,
+                            network_packet.ip.unwrap()
+                        );
                     }
                     NetworkProtocol::Unknown => {
                         println!("Unimplemented network for {:?}", network_packet.payload)
                     }
                     NetworkProtocol::IcmpIpv6 => {
-                        //println!("{:?} ### {:?} ### {:?}", network_packet.protocol, network_packet.ip.unwrap(), network_packet.icmp);
+                        println!(
+                            "{:?} ### {:?} ### {:?}",
+                            network_packet.protocol,
+                            network_packet.ip.unwrap(),
+                            network_packet.icmp
+                        );
                     }
                 }
             }
