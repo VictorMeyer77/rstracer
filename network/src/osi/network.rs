@@ -149,6 +149,27 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_arp_invalid() {
+        let invalid_payload = b"";
+        let result = parse_arp(invalid_payload);
+        assert!(result.is_err());
+
+        let error = result.err().unwrap();
+        match error {
+            Error::PacketParseError {
+                layer,
+                protocol,
+                data,
+            } => {
+                assert_eq!(layer, Layer::Network.to_string());
+                assert_eq!(protocol, NetworkProtocol::Arp.to_string());
+                assert_eq!(data, invalid_payload.to_vec());
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
     fn test_parse_ipv4_valid() {
         let frame = create_ipv4_packet(IpNextHeaderProtocols::Icmp, &[0u8; 20]);
 
@@ -163,6 +184,27 @@ mod tests {
     }
 
     #[test]
+    fn test_parse_icpv4_invalid() {
+        let invalid_payload = b"";
+        let result = parse_ipv4(invalid_payload);
+        assert!(result.is_err());
+
+        let error = result.err().unwrap();
+        match error {
+            Error::PacketParseError {
+                layer,
+                protocol,
+                data,
+            } => {
+                assert_eq!(layer, Layer::Network.to_string());
+                assert_eq!(protocol, NetworkProtocol::Ipv4.to_string());
+                assert_eq!(data, invalid_payload.to_vec());
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
     fn test_parse_ipv6_valid() {
         let frame = create_ipv6_packet(IpNextHeaderProtocols::Udp, &[0u8; 40]);
         let result = parse_ipv6(&frame);
@@ -173,6 +215,27 @@ mod tests {
         assert!(network.ipv6.is_some());
         assert!(network.arp.is_none());
         assert!(network.ipv4.is_none());
+    }
+
+    #[test]
+    fn test_parse_icpv6_invalid() {
+        let invalid_payload = b"";
+        let result = parse_ipv6(invalid_payload);
+        assert!(result.is_err());
+
+        let error = result.err().unwrap();
+        match error {
+            Error::PacketParseError {
+                layer,
+                protocol,
+                data,
+            } => {
+                assert_eq!(layer, Layer::Network.to_string());
+                assert_eq!(protocol, NetworkProtocol::Ipv6.to_string());
+                assert_eq!(data, invalid_payload.to_vec());
+            }
+            _ => panic!("Unexpected error type"),
+        }
     }
 
     #[test]
@@ -240,7 +303,7 @@ mod tests {
         }) = result
         {
             assert_eq!(layer, "network");
-            assert_eq!(protocol, "unknown"); // EtherTypes::Unknown
+            assert_eq!(protocol, "unknown");
             assert_eq!(data, data_link.payload);
         } else {
             panic!("Expected UnimplementedError");

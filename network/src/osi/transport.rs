@@ -400,6 +400,36 @@ mod tests {
     }
 
     #[test]
+    fn test_read_packet_ipv6_unsupported() {
+        let payload = b"";
+        let ipv6_packet = create_ipv6_packet(IpNextHeaderProtocols::Igmp, payload);
+        let network = Network {
+            protocol: NetworkProtocol::Ipv6,
+            ipv4: None,
+            ipv6: Some(Ipv6Packet::new(&ipv6_packet[14..]).unwrap().from_packet()),
+            arp: None,
+            payload: Vec::new(),
+        };
+
+        let result = read_packet(&network);
+        assert!(result.is_err());
+
+        let error = result.err().unwrap();
+        match error {
+            Error::UnimplementedError {
+                layer,
+                protocol,
+                data,
+            } => {
+                assert_eq!(layer, Layer::Transport.to_string());
+                assert_eq!(protocol, IpNextHeaderProtocols::Igmp.to_string());
+                assert_eq!(data, payload.to_vec());
+            }
+            _ => panic!("Unexpected error type"),
+        }
+    }
+
+    #[test]
     fn test_read_packet_ipv6_udp() {
         let payload = b"valid ipv6 udp";
         let udp_packet_data = {
