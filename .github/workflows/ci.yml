@@ -87,7 +87,7 @@ jobs:
       - name: Test
         run: cargo test --lib
   test-lib-windows:
-    name: Test library On Linux
+    name: Test library On Windows
     runs-on: '${{ matrix.os }}'
     strategy:
       matrix:
@@ -204,7 +204,7 @@ jobs:
         env:
           LLVM_PROFILE_FILE: grcov-%p-%m.profraw
           RUSTFLAGS: '-Cinstrument-coverage'
-        run: sudo cargo test
+        run: cargo test
       - name: Generate coverage
         run: |
           grcov $(find . -name "grcov-*.profraw" -print) \
