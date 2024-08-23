@@ -19,7 +19,7 @@ pub struct Application {
 }
 
 impl fmt::Display for ApplicationProtocol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
