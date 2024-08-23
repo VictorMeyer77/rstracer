@@ -47,7 +47,7 @@ jobs:
             test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
             hashFiles('**/Cargo.lock') }}
       - name: Test
-        run: sudo env "PATH=$PATH" cargo test --lib
+        run: sudo cargo test --lib
   test-lib-macos:
     name: Test library On Macos
     runs-on: '${{ matrix.os }}'
@@ -218,4 +218,4 @@ jobs:
             pre-commit-${{ runner.os }}-pre-commit-${{
             hashFiles('**/.pre-commit-config.yaml') }}
       - name: Run pre-commit
-        run: pre-commit run --all-files
+        run: sudo pre-commit run --all-files
