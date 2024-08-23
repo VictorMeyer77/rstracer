@@ -27,7 +27,7 @@ pub struct Transport {
 }
 
 impl fmt::Display for TransportProtocol {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",
@@ -467,9 +467,7 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::NoLayerError => {
-                assert!(true)
-            }
+            Error::NoLayerError => {}
             _ => panic!("Unexpected error type"),
         }
     }
