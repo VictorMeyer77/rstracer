@@ -47,7 +47,7 @@ jobs:
             test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
             hashFiles('**/Cargo.lock') }}
       - name: Test
-        run: sudo cargo test --lib
+        run: cargo test --lib
   test-lib-macos:
     name: Test library On Macos
     runs-on: '${{ matrix.os }}'
@@ -85,7 +85,45 @@ jobs:
             test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
             hashFiles('**/Cargo.lock') }}
       - name: Test
-        run: sudo cargo test --lib
+        run: cargo test --lib
+  test-lib-windows:
+    name: Test library On Linux
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - windows-latest
+        arch:
+          - x86
+          - x86_64
+          - arm
+          - aarch64
+        toolchain:
+          - stable
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Setup Rust
+        run: >
+          rustup toolchain add ${{ matrix.toolchain }} --component
+          llvm-tools-preview
+
+          rustup override set ${{ matrix.toolchain }}
+      - name: Configure cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: >-
+            test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
+            hashFiles('**/Cargo.lock') }}
+      - name: Test
+        run: cargo test --lib
   test-coverage:
     name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
     runs-on: ubuntu-latest
@@ -218,4 +256,4 @@ jobs:
             pre-commit-${{ runner.os }}-pre-commit-${{
             hashFiles('**/.pre-commit-config.yaml') }}
       - name: Run pre-commit
-        run: sudo pre-commit run --all-files
+        run: pre-commit run --all-files
