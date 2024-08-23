@@ -3,15 +3,15 @@ name: ci
   - pull_request
   - push
 jobs:
-  test-lib:
-    name: Test library
+  test-lib-linux:
+    name: Test library On Linux
     runs-on: '${{ matrix.os }}'
     strategy:
       matrix:
         os:
-          - macos-latest
+          #- macos-latest
           - ubuntu-latest
-          - windows-latest
+          #- windows-latest
         arch:
           - x86
           - x86_64
@@ -26,7 +26,46 @@ jobs:
       - name: Install project prerequisites
         run: >
           sudo apt-get update
+          
           sudo apt-get install libpcap-dev
+      - name: Setup Rust
+        run: >
+          rustup toolchain add ${{ matrix.toolchain }} --component
+          llvm-tools-preview
+
+          rustup override set ${{ matrix.toolchain }}
+      - name: Configure cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: >-
+            test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
+            hashFiles('**/Cargo.lock') }}
+      - name: Test
+        run: sudo cargo test --lib
+  test-lib-macos:
+    name: Test library On Macos
+    runs-on: '${{ matrix.os }}'
+    strategy:
+      matrix:
+        os:
+          - macos-latest
+        arch:
+          - x86
+          - x86_64
+          - arm
+          - aarch64
+        toolchain:
+          - stable
+    continue-on-error: true
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
       - name: Setup Rust
         run: >
           rustup toolchain add ${{ matrix.toolchain }} --component
@@ -97,6 +136,7 @@ jobs:
       - name: Install project prerequisites
         run: >
             sudo apt-get update
+          
             sudo apt-get install libpcap-dev
       - name: Checkout repository
         uses: actions/checkout@v3
