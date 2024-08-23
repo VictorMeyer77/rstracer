@@ -47,7 +47,7 @@ jobs:
             test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
             hashFiles('**/Cargo.lock') }}
       - name: Test
-        run: sudo cargo test --lib
+        run: sudo env "PATH=$PATH" cargo test --lib
   test-lib-macos:
     name: Test library On Macos
     runs-on: '${{ matrix.os }}'
@@ -193,6 +193,11 @@ jobs:
         run: |
           rustup update stable
           rustup override set stable
+      - name: Install project prerequisites
+        run: >
+          sudo apt-get update
+          
+          sudo apt-get install libpcap-dev
       - name: Install pre-commit
         run: pip install --no-cache-dir pre-commit
       - name: Configure Rust cache
