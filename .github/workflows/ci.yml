@@ -23,6 +23,10 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+      - name: Install project prerequisites
+        run: >
+          sudo apt-get update
+          sudo apt-get install libpcap-dev
       - name: Setup Rust
         run: >
           rustup toolchain add ${{ matrix.toolchain }} --component
@@ -42,7 +46,7 @@ jobs:
             test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
             hashFiles('**/Cargo.lock') }}
       - name: Test
-        run: cargo test --lib
+        run: sudo cargo test --lib
   test-coverage:
     name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
     runs-on: ubuntu-latest
@@ -89,7 +93,11 @@ jobs:
           sudo apt-get update
 
           sudo apt-get install -y clang-${{ matrix.clang }} g++-${{ matrix.gcc
-          }} libpcap-dev
+          }}
+      - name: Install project prerequisites
+        run: >
+            sudo apt-get update
+            sudo apt-get install libpcap-dev
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup grcov
@@ -118,7 +126,7 @@ jobs:
         env:
           LLVM_PROFILE_FILE: grcov-%p-%m.profraw
           RUSTFLAGS: '-Cinstrument-coverage'
-        run: cargo test
+        run: sudo cargo test
       - name: Generate coverage
         run: |
           grcov $(find . -name "grcov-*.profraw" -print) \
