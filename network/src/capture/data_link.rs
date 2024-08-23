@@ -1,5 +1,5 @@
+use crate::capture::Layer;
 use crate::error::Error;
-use crate::osi::Layer;
 use pnet::packet::ethernet::{Ethernet, EthernetPacket};
 use pnet::packet::FromPacket;
 use std::fmt;
@@ -13,7 +13,6 @@ pub enum DataLinkProtocol {
 pub struct DataLink {
     pub protocol: DataLinkProtocol,
     pub ethernet: Option<Ethernet>,
-    pub payload: Vec<u8>,
 }
 
 impl fmt::Display for DataLinkProtocol {
@@ -33,13 +32,11 @@ pub fn read_packet(packet: &[u8]) -> Result<DataLink, Error> {
         Ok(DataLink {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet.from_packet()),
-            payload: vec![],
         })
     } else {
         Err(Error::UnimplementedError {
             layer: Layer::DataLink.to_string(),
             protocol: "".to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -47,7 +44,7 @@ pub fn read_packet(packet: &[u8]) -> Result<DataLink, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::osi::tests::create_ethernet_packet;
+    use crate::capture::tests::create_ethernet_packet;
     use pnet::packet::ethernet::EtherTypes;
 
     #[test]
@@ -65,7 +62,6 @@ mod tests {
         let datalink = result.unwrap();
         assert_eq!(datalink.protocol, DataLinkProtocol::Ethernet);
         assert!(datalink.ethernet.is_some());
-        assert_eq!(datalink.payload, vec![]);
     }
 
     #[test]
@@ -76,14 +72,9 @@ mod tests {
 
         if let Err(error) = result {
             match error {
-                Error::UnimplementedError {
-                    layer,
-                    protocol,
-                    data,
-                } => {
+                Error::UnimplementedError { layer, protocol } => {
                     assert_eq!(layer, "data_link");
                     assert_eq!(protocol, "");
-                    assert_eq!(data, packet);
                 }
                 _ => panic!("Unexpected error type"),
             }

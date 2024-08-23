@@ -1,6 +1,6 @@
+use crate::capture::data_link::{DataLink, DataLinkProtocol};
+use crate::capture::Layer;
 use crate::error::Error;
-use crate::osi::data_link::{DataLink, DataLinkProtocol};
-use crate::osi::Layer;
 use pnet::packet::arp::{Arp, ArpPacket};
 use pnet::packet::ethernet::EtherTypes;
 use pnet::packet::ipv4::{Ipv4, Ipv4Packet};
@@ -21,7 +21,6 @@ pub struct Network {
     pub ipv4: Option<Ipv4>,
     pub ipv6: Option<Ipv6>,
     pub arp: Option<Arp>,
-    pub payload: Vec<u8>,
 }
 
 impl fmt::Display for NetworkProtocol {
@@ -43,7 +42,6 @@ impl Network {
         Network {
             protocol: NetworkProtocol::Arp,
             arp: Some(arp),
-            payload: vec![],
             ipv4: None,
             ipv6: None,
         }
@@ -53,7 +51,6 @@ impl Network {
         Network {
             protocol: NetworkProtocol::Ipv4,
             ipv4: Some(ipv4),
-            payload: vec![],
             arp: None,
             ipv6: None,
         }
@@ -63,7 +60,6 @@ impl Network {
         Network {
             protocol: NetworkProtocol::Ipv6,
             ipv4: None,
-            payload: vec![],
             arp: None,
             ipv6: Some(ipv6),
         }
@@ -108,23 +104,25 @@ fn parse_ipv6(packet: &[u8]) -> Result<Network, Error> {
 
 pub fn read_packet(data_link: &DataLink) -> Result<Network, Error> {
     match data_link.protocol {
-        DataLinkProtocol::Ethernet => match data_link.ethernet.clone().unwrap().ethertype {
-            EtherTypes::Ipv4 => parse_ipv4(&data_link.payload),
-            EtherTypes::Ipv6 => parse_ipv6(&data_link.payload),
-            EtherTypes::Arp => parse_arp(&data_link.payload),
-            unimplemented => Err(Error::UnimplementedError {
-                layer: Layer::Network.to_string(),
-                protocol: format!("{}", unimplemented).to_lowercase(),
-                data: data_link.payload.clone(),
-            }),
-        },
+        DataLinkProtocol::Ethernet => {
+            let ethernet = data_link.ethernet.clone().unwrap();
+            match ethernet.ethertype {
+                EtherTypes::Ipv4 => parse_ipv4(&ethernet.payload),
+                EtherTypes::Ipv6 => parse_ipv6(&ethernet.payload),
+                EtherTypes::Arp => parse_arp(&ethernet.payload),
+                unimplemented => Err(Error::UnimplementedError {
+                    layer: Layer::Network.to_string(),
+                    protocol: format!("{}", unimplemented).to_lowercase(),
+                }),
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::osi::tests::{create_arp_packet, create_ipv4_packet, create_ipv6_packet};
+    use crate::capture::tests::{create_arp_packet, create_ipv4_packet, create_ipv6_packet};
     use pnet::packet::ethernet::MutableEthernetPacket;
     use pnet::packet::ip::IpNextHeaderProtocols;
 
@@ -248,7 +246,6 @@ mod tests {
         let data_link = DataLink {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet_packet.from_packet()),
-            payload: create_ipv4_packet(IpNextHeaderProtocols::Icmp, &[0u8; 20]),
         };
         let result = read_packet(&data_link);
         assert!(result.is_ok());
@@ -265,7 +262,6 @@ mod tests {
         let data_link = DataLink {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet_packet.from_packet()),
-            payload: create_ipv6_packet(IpNextHeaderProtocols::Udp, &[0u8; 40]),
         };
         let result = read_packet(&data_link);
         assert!(result.is_ok());
@@ -278,7 +274,6 @@ mod tests {
         let data_link = DataLink {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet_packet.from_packet()),
-            payload: create_arp_packet(),
         };
         let result = read_packet(&data_link);
         assert!(result.is_ok());
@@ -291,20 +286,13 @@ mod tests {
         let data_link = DataLink {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet_packet.from_packet()),
-            payload: vec![0u8; 20],
         };
         let result = read_packet(&data_link);
         assert!(result.is_err());
 
-        if let Err(Error::UnimplementedError {
-            layer,
-            protocol,
-            data,
-        }) = result
-        {
+        if let Err(Error::UnimplementedError { layer, protocol }) = result {
             assert_eq!(layer, "network");
             assert_eq!(protocol, "unknown");
-            assert_eq!(data, data_link.payload);
         } else {
             panic!("Expected UnimplementedError");
         }

@@ -1,6 +1,6 @@
+use crate::capture::network::{Network, NetworkProtocol};
+use crate::capture::Layer;
 use crate::error::Error;
-use crate::osi::network::{Network, NetworkProtocol};
-use crate::osi::Layer;
 use pnet::packet::icmp::{Icmp, IcmpPacket};
 use pnet::packet::icmpv6::{Icmpv6, Icmpv6Packet};
 use pnet::packet::ip::IpNextHeaderProtocols;
@@ -24,7 +24,6 @@ pub struct Transport {
     pub udp: Option<Udp>,
     pub icmpv4: Option<Icmp>,
     pub icmpv6: Option<Icmpv6>,
-    pub payload: Vec<u8>,
 }
 
 impl fmt::Display for TransportProtocol {
@@ -50,7 +49,6 @@ impl Transport {
             udp: None,
             icmpv4: None,
             icmpv6: None,
-            payload: vec![],
         }
     }
 
@@ -61,7 +59,6 @@ impl Transport {
             udp: Some(udp),
             icmpv4: None,
             icmpv6: None,
-            payload: vec![],
         }
     }
 
@@ -72,7 +69,6 @@ impl Transport {
             udp: None,
             icmpv4: Some(icmpv4),
             icmpv6: None,
-            payload: vec![],
         }
     }
 
@@ -83,7 +79,6 @@ impl Transport {
             udp: None,
             icmpv4: None,
             icmpv6: Some(icmpv6),
-            payload: vec![],
         }
     }
 }
@@ -138,10 +133,7 @@ fn parse_icmpv6(packet: &[u8]) -> Result<Transport, Error> {
 
 pub fn read_packet(network: &Network) -> Result<Transport, Error> {
     match network.protocol {
-        NetworkProtocol::Arp => Err(Error::NoLayerError {
-            layer: Layer::Transport.to_string(),
-            protocol: network.protocol.to_string(),
-        }),
+        NetworkProtocol::Arp => Err(Error::NoLayerError),
         NetworkProtocol::Ipv4 => {
             let ipv4 = network.ipv4.clone().unwrap();
             match ipv4.next_level_protocol {
@@ -151,7 +143,6 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
                 unimplemented => Err(Error::UnimplementedError {
                     layer: Layer::Transport.to_string(),
                     protocol: unimplemented.to_string(),
-                    data: ipv4.payload.clone(),
                 }),
             }
         }
@@ -164,7 +155,6 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
                 unimplemented => Err(Error::UnimplementedError {
                     layer: Layer::Transport.to_string(),
                     protocol: unimplemented.to_string(),
-                    data: ipv6.payload.clone(),
                 }),
             }
         }
@@ -174,7 +164,7 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::osi::tests::{
+    use crate::capture::tests::{
         create_ethernet_packet, create_icmpv4_packet, create_icmpv6_packet, create_ipv4_packet,
         create_ipv6_packet, create_tcp_packet, create_udp_packet,
     };
@@ -204,7 +194,6 @@ mod tests {
         let tcp = transport.tcp.unwrap();
         assert_eq!(tcp.source, 12345);
         assert_eq!(tcp.destination, 80);
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -244,7 +233,6 @@ mod tests {
         let udp = transport.udp.unwrap();
         assert_eq!(udp.source, 54321);
         assert_eq!(udp.destination, 53);
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -280,7 +268,6 @@ mod tests {
         let transport = result.unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Icmpv4);
         assert!(transport.icmpv4.is_some());
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -316,7 +303,6 @@ mod tests {
         let transport = result.unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Icmpv6);
         assert!(transport.icmpv6.is_some());
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -353,7 +339,6 @@ mod tests {
             ),
             ipv6: None,
             arp: None,
-            payload: Vec::new(),
         };
 
         let result = read_packet(&network);
@@ -366,7 +351,6 @@ mod tests {
         let tcp = transport.tcp.unwrap();
         assert_eq!(tcp.source, 1234);
         assert_eq!(tcp.destination, 80);
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -378,7 +362,6 @@ mod tests {
             ipv4: Some(Ipv4Packet::new(&ipv4_packet[14..]).unwrap().from_packet()),
             ipv6: None,
             arp: None,
-            payload: Vec::new(),
         };
 
         let result = read_packet(&network);
@@ -386,14 +369,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::UnimplementedError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::UnimplementedError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, IpNextHeaderProtocols::Igmp.to_string());
-                assert_eq!(data, payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -408,7 +386,6 @@ mod tests {
             ipv4: None,
             ipv6: Some(Ipv6Packet::new(&ipv6_packet[14..]).unwrap().from_packet()),
             arp: None,
-            payload: Vec::new(),
         };
 
         let result = read_packet(&network);
@@ -416,14 +393,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::UnimplementedError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::UnimplementedError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, IpNextHeaderProtocols::Igmp.to_string());
-                assert_eq!(data, payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -451,7 +423,6 @@ mod tests {
                     .from_packet(),
             ),
             arp: None,
-            payload: Vec::new(),
         };
 
         let result = read_packet(&network);
@@ -464,7 +435,6 @@ mod tests {
         let udp = transport.udp.unwrap();
         assert_eq!(udp.source, 1234);
         assert_eq!(udp.destination, 53);
-        assert_eq!(transport.payload, Vec::<u8>::new());
     }
 
     #[test]
@@ -490,7 +460,6 @@ mod tests {
                     .unwrap()
                     .from_packet(),
             ),
-            payload: Vec::new(),
         };
 
         let result = read_packet(&network);
@@ -498,9 +467,8 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::NoLayerError { layer, protocol } => {
-                assert_eq!(layer, Layer::Transport.to_string());
-                assert_eq!(protocol, NetworkProtocol::Arp.to_string());
+            Error::NoLayerError => {
+                assert!(true)
             }
             _ => panic!("Unexpected error type"),
         }

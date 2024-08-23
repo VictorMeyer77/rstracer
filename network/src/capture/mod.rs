@@ -1,14 +1,30 @@
+use crate::capture::application::Application;
+use crate::capture::data_link::DataLink;
+use crate::capture::network::Network;
+use crate::capture::transport::Transport;
+use crate::error::Error;
 use std::fmt;
 
+pub mod application;
 pub mod data_link;
 pub mod network;
 pub mod transport;
 
+#[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub enum Layer {
     DataLink,
     Network,
     Transport,
     Application,
+}
+
+#[derive(Debug, Clone, Default)]
+pub struct Capture {
+    pub packet: Vec<u8>,
+    pub data_link: Option<DataLink>,
+    pub network: Option<Network>,
+    pub transport: Option<Transport>,
+    pub application: Option<Application>,
 }
 
 impl fmt::Display for Layer {
@@ -23,6 +39,43 @@ impl fmt::Display for Layer {
                 Layer::Application => "application",
             }
         )
+    }
+}
+
+impl Capture {
+    pub fn parse(packet: &[u8]) -> Result<Capture, Error> {
+        let mut capture = Capture {
+            packet: packet.to_vec(),
+            ..Default::default()
+        };
+
+        match data_link::read_packet(packet) {
+            Ok(data_link) => {
+                match network::read_packet(&data_link) {
+                    Ok(network) => {
+                        match transport::read_packet(&network) {
+                            Ok(transport) => {
+                                /*match application::read_packet(&transport) {
+                                    Ok(application) => capture.application = Some(application),
+                                    Err(error) => return Err(error),
+                                }*/
+                                capture.transport = Some(transport)
+                            }
+                            Err(Error::NoLayerError) => return Ok(capture),
+                            Err(error) => return Err(error),
+                        }
+                        capture.network = Some(network)
+                    }
+                    Err(Error::NoLayerError) => return Ok(capture),
+                    Err(error) => return Err(error),
+                }
+                capture.data_link = Some(data_link);
+            }
+            Err(Error::NoLayerError) => return Ok(capture),
+            Err(error) => return Err(error),
+        }
+
+        Ok(capture)
     }
 }
 
