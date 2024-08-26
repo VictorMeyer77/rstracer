@@ -106,7 +106,7 @@ pub mod tests {
     use pnet::packet::ipv6::MutableIpv6Packet;
     use pnet::packet::tcp::MutableTcpPacket;
     use pnet::packet::udp::MutableUdpPacket;
-    use pnet::packet::{ipv4, Packet};
+    use pnet::packet::ipv4;
     use std::net::{Ipv4Addr, Ipv6Addr};
     use std::str::FromStr;
 

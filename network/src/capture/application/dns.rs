@@ -306,12 +306,12 @@ pub mod tests {
         let flags = 0x8180;
         let dns_flags = DnsHeaderFlags::from_u16(flags);
 
-        assert_eq!(dns_flags.qr, true);
+        assert!(dns_flags.qr);
         assert_eq!(dns_flags.opcode, 0);
-        assert_eq!(dns_flags.aa, false);
-        assert_eq!(dns_flags.tc, false);
-        assert_eq!(dns_flags.rd, true);
-        assert_eq!(dns_flags.ra, true);
+        assert!(!dns_flags.aa);
+        assert!(!dns_flags.tc);
+        assert!(dns_flags.rd);
+        assert!(dns_flags.ra);
         assert_eq!(dns_flags.z, 0);
         assert_eq!(dns_flags.rcode, 0);
     }
@@ -321,12 +321,12 @@ pub mod tests {
         let flags = 0xFFFF;
         let dns_flags = DnsHeaderFlags::from_u16(flags);
 
-        assert_eq!(dns_flags.qr, true);
+        assert!(dns_flags.qr);
         assert_eq!(dns_flags.opcode, 15);
-        assert_eq!(dns_flags.aa, true);
-        assert_eq!(dns_flags.tc, true);
-        assert_eq!(dns_flags.rd, true);
-        assert_eq!(dns_flags.ra, true);
+        assert!(dns_flags.aa);
+        assert!(dns_flags.tc);
+        assert!(dns_flags.rd);
+        assert!(dns_flags.ra);
         assert_eq!(dns_flags.z, 7);
         assert_eq!(dns_flags.rcode, 15);
     }
@@ -336,12 +336,12 @@ pub mod tests {
         let flags = 0x0000;
         let dns_flags = DnsHeaderFlags::from_u16(flags);
 
-        assert_eq!(dns_flags.qr, false);
+        assert!(!dns_flags.qr);
         assert_eq!(dns_flags.opcode, 0);
-        assert_eq!(dns_flags.aa, false);
-        assert_eq!(dns_flags.tc, false);
-        assert_eq!(dns_flags.rd, false);
-        assert_eq!(dns_flags.ra, false);
+        assert!(!dns_flags.aa);
+        assert!(!dns_flags.tc);
+        assert!(!dns_flags.rd);
+        assert!(!dns_flags.ra);
         assert_eq!(dns_flags.z, 0);
         assert_eq!(dns_flags.rcode, 0);
     }
