@@ -9,9 +9,7 @@ jobs:
     strategy:
       matrix:
         os:
-          #- macos-latest
           - ubuntu-latest
-          #- windows-latest
         arch:
           - x86
           - x86_64
@@ -24,9 +22,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Install project prerequisites
-        run: >
+        run: |
           sudo apt-get update
-          
           sudo apt-get install libpcap-dev
       - name: Setup Rust
         run: >
@@ -172,10 +169,9 @@ jobs:
           sudo apt-get install -y clang-${{ matrix.clang }} g++-${{ matrix.gcc
           }}
       - name: Install project prerequisites
-        run: >
-            sudo apt-get update
-          
-            sudo apt-get install libpcap-dev
+        run: |
+          sudo apt-get update
+          sudo apt-get install libpcap-dev
       - name: Checkout repository
         uses: actions/checkout@v3
       - name: Setup grcov
@@ -232,9 +228,8 @@ jobs:
           rustup update stable
           rustup override set stable
       - name: Install project prerequisites
-        run: >
+        run: |
           sudo apt-get update
-          
           sudo apt-get install libpcap-dev
       - name: Install pre-commit
         run: pip install --no-cache-dir pre-commit
