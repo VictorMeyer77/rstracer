@@ -102,11 +102,11 @@ pub mod tests {
     use pnet::packet::icmp::IcmpTypes;
     use pnet::packet::icmpv6::{Icmpv6Types, MutableIcmpv6Packet};
     use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
+    use pnet::packet::ipv4;
     use pnet::packet::ipv4::MutableIpv4Packet;
     use pnet::packet::ipv6::MutableIpv6Packet;
     use pnet::packet::tcp::MutableTcpPacket;
     use pnet::packet::udp::MutableUdpPacket;
-    use pnet::packet::ipv4;
     use std::net::{Ipv4Addr, Ipv6Addr};
     use std::str::FromStr;
 
