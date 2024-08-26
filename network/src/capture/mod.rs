@@ -3,6 +3,7 @@ use crate::capture::data_link::DataLink;
 use crate::capture::network::Network;
 use crate::capture::transport::Transport;
 use crate::error::Error;
+use pcap::Device;
 use std::fmt;
 
 pub mod application;
@@ -18,8 +19,9 @@ pub enum Layer {
     Application,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone)]
 pub struct Capture {
+    pub device: Device,
     pub packet: Vec<u8>,
     pub data_link: Option<DataLink>,
     pub network: Option<Network>,
@@ -43,22 +45,29 @@ impl fmt::Display for Layer {
 }
 
 impl Capture {
-    pub fn parse(packet: &[u8]) -> Result<Capture, Error> {
-        let mut capture = Capture {
+    fn new(packet: &[u8], device: &Device) -> Capture {
+        Capture {
+            device: device.clone(),
             packet: packet.to_vec(),
-            ..Default::default()
-        };
+            data_link: None,
+            network: None,
+            transport: None,
+            application: None,
+        }
+    }
 
+    pub fn parse(packet: &[u8], device: &Device) -> Result<Capture, Error> {
+        let mut capture = Self::new(packet, device);
         match data_link::read_packet(packet) {
             Ok(data_link) => {
                 match network::read_packet(&data_link) {
                     Ok(network) => {
                         match transport::read_packet(&network) {
                             Ok(transport) => {
-                                /*match application::read_packet(&transport) {
+                                match application::read_packet(&transport) {
                                     Ok(application) => capture.application = Some(application),
                                     Err(error) => return Err(error),
-                                }*/
+                                }
                                 capture.transport = Some(transport)
                             }
                             Err(Error::NoLayerError) => return Ok(capture),
@@ -80,8 +89,12 @@ impl Capture {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
+    use crate::capture::application::ApplicationProtocol;
+    use crate::capture::data_link::DataLinkProtocol;
+    use crate::capture::network::NetworkProtocol;
+    use crate::capture::transport::TransportProtocol;
     use pnet::datalink::MacAddr;
     use pnet::packet::arp::{ArpHardwareTypes, ArpOperations, MutableArpPacket};
     use pnet::packet::ethernet::{EtherType, EtherTypes, MutableEthernetPacket};
@@ -89,20 +102,21 @@ mod tests {
     use pnet::packet::icmp::IcmpTypes;
     use pnet::packet::icmpv6::{Icmpv6Types, MutableIcmpv6Packet};
     use pnet::packet::ip::{IpNextHeaderProtocol, IpNextHeaderProtocols};
-    use pnet::packet::ipv4;
     use pnet::packet::ipv4::MutableIpv4Packet;
     use pnet::packet::ipv6::MutableIpv6Packet;
     use pnet::packet::tcp::MutableTcpPacket;
     use pnet::packet::udp::MutableUdpPacket;
+    use pnet::packet::{ipv4, Packet};
     use std::net::{Ipv4Addr, Ipv6Addr};
     use std::str::FromStr;
 
-    #[test]
-    fn test_layer_display() {
-        assert_eq!(Layer::DataLink.to_string(), "data_link");
-        assert_eq!(Layer::Network.to_string(), "network");
-        assert_eq!(Layer::Transport.to_string(), "transport");
-        assert_eq!(Layer::Application.to_string(), "application");
+    pub fn create_packet() -> Vec<u8> {
+        vec![
+            204, 45, 27, 186, 195, 248, 248, 99, 63, 244, 10, 21, 8, 0, 69, 0, 0, 67, 129, 205, 0,
+            0, 64, 17, 117, 60, 192, 168, 1, 79, 192, 168, 1, 1, 174, 55, 0, 53, 0, 47, 113, 146,
+            86, 48, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 6, 116, 97, 105, 118, 101, 109, 3, 99, 111, 109,
+            0, 0, 1, 0, 1, 0, 0, 41, 5, 192, 0, 0, 0, 0, 0, 0,
+        ]
     }
 
     // helper functions for mod testing
@@ -230,5 +244,36 @@ mod tests {
             icmpv6_packet.set_payload(payload);
         }
         create_ipv6_packet(IpNextHeaderProtocols::Icmpv6, &icmpv6_packet_data)
+    }
+
+    #[test]
+    fn test_layer_display() {
+        assert_eq!(Layer::DataLink.to_string(), "data_link");
+        assert_eq!(Layer::Network.to_string(), "network");
+        assert_eq!(Layer::Transport.to_string(), "transport");
+        assert_eq!(Layer::Application.to_string(), "application");
+    }
+
+    #[test]
+    fn test_capture_parse() {
+        let device = Device::lookup().unwrap().unwrap();
+        let packet = create_packet();
+        let capture = Capture::parse(&packet, &device).unwrap();
+
+        let data_link = capture.data_link.unwrap();
+        assert_eq!(data_link.protocol, DataLinkProtocol::Ethernet);
+        assert!(data_link.ethernet.is_some());
+
+        let network = capture.network.unwrap();
+        assert_eq!(network.protocol, NetworkProtocol::Ipv4);
+        assert_eq!(network.ipv4.unwrap().source, Ipv4Addr::new(192, 168, 1, 79));
+
+        let transport = capture.transport.unwrap();
+        assert_eq!(transport.protocol, TransportProtocol::Udp);
+        assert!(transport.udp.is_some());
+
+        let application = capture.application.unwrap();
+        assert_eq!(application.protocol, ApplicationProtocol::Dns);
+        assert_eq!(application.dns.unwrap().question.qname, "taivem.com");
     }
 }

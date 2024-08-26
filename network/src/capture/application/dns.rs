@@ -14,7 +14,7 @@ pub struct Dns {
 }
 
 #[derive(Debug, Clone)]
-struct DnsHeader {
+pub struct DnsHeader {
     pub id: u16,
     pub flags: u16,
     pub qd_count: u16,
@@ -24,7 +24,7 @@ struct DnsHeader {
 }
 
 #[derive(Debug, Clone)]
-struct DnsHeaderFlags {
+pub struct DnsHeaderFlags {
     pub qr: bool,
     pub opcode: u8,
     pub aa: bool,

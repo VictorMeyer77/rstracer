@@ -1,5 +1,6 @@
 use crate::capture::Capture;
 use crate::error::{handle_error, Error};
+use futures::future::join_all;
 use pcap::Device;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -11,12 +12,15 @@ use tracing::info;
 pub mod capture;
 pub mod error;
 
-pub async fn producer(sender: Sender<Capture>, stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
-    let device = Device::lookup()?.unwrap();
-    info!("use device {}", device.name);
+pub async fn read_device(
+    device: Device,
+    sender: Sender<Capture>,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let device_name = device.name.clone();
+    info!("read device {}", device_name);
 
-    let capture = pcap::Capture::from_device(device)?
-        .promisc(true)
+    let capture = pcap::Capture::from_device(device.clone())?
         .timeout(100)
         .open()?;
 
@@ -24,7 +28,7 @@ pub async fn producer(sender: Sender<Capture>, stop_flag: Arc<AtomicBool>) -> Re
 
     while !stop_flag.load(Ordering::Relaxed) {
         match capture.next_packet() {
-            Ok(packet) => match Capture::parse(packet.data) {
+            Ok(packet) => match Capture::parse(packet.data, &device) {
                 Ok(capture) => {
                     if let Err(e) = sender.send(capture).await {
                         handle_error(Error::Channel(Box::new(e)));
@@ -36,7 +40,25 @@ pub async fn producer(sender: Sender<Capture>, stop_flag: Arc<AtomicBool>) -> Re
         }
         sleep(Duration::from_millis(100)).await;
     }
-    info!("producer stop gracefully");
+    info!("producer on device {} stop gracefully", device_name);
+    Ok(())
+}
+
+pub async fn producer(sender: Sender<Capture>, stop_flag: &Arc<AtomicBool>) -> Result<(), Error> {
+    let devices: Vec<Device> = Device::list()?
+        .into_iter()
+        .filter(|device| device.flags.is_up() && device.flags.is_running())
+        .collect();
+
+    let tasks: Vec<_> = devices
+        .into_iter()
+        .map(|device| {
+            let sender = sender.clone();
+            let stop_flag = Arc::clone(stop_flag);
+            tokio::spawn(async move { read_device(device, sender, stop_flag).await })
+        })
+        .collect();
+    join_all(tasks).await;
     Ok(())
 }
 

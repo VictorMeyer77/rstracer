@@ -59,9 +59,9 @@ mod tests {
         let result = read_packet(&packet);
         assert!(result.is_ok());
 
-        let datalink = result.unwrap();
-        assert_eq!(datalink.protocol, DataLinkProtocol::Ethernet);
-        assert!(datalink.ethernet.is_some());
+        let data_link = result.unwrap();
+        assert_eq!(data_link.protocol, DataLinkProtocol::Ethernet);
+        assert!(data_link.ethernet.is_some());
     }
 
     #[test]

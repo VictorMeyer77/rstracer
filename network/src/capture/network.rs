@@ -239,7 +239,7 @@ mod tests {
     #[test]
     fn test_read_packet_ethernet_ipv4() {
         let ethernet_packet = MutableEthernetPacket::owned(create_ipv4_packet(
-            IpNextHeaderProtocols::Icmp,
+            IpNextHeaderProtocols::Tcp,
             &[0u8; 20],
         ))
         .unwrap();
@@ -247,9 +247,12 @@ mod tests {
             protocol: DataLinkProtocol::Ethernet,
             ethernet: Some(ethernet_packet.from_packet()),
         };
-        let result = read_packet(&data_link);
-        assert!(result.is_ok());
-        assert_eq!(result.unwrap().protocol, NetworkProtocol::Ipv4);
+        let result = read_packet(&data_link).unwrap();
+        assert_eq!(result.protocol, NetworkProtocol::Ipv4);
+        assert_eq!(
+            result.ipv4.unwrap().next_level_protocol,
+            IpNextHeaderProtocols::Tcp
+        )
     }
 
     #[test]

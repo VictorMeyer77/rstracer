@@ -70,7 +70,7 @@ pub fn read_packet(transport: &Transport) -> Result<Application, Error> {
     let transport = transport.clone();
     match transport.protocol {
         TransportProtocol::Tcp => parse_tcp(&transport.tcp.unwrap().payload),
-        TransportProtocol::Udp => parse_tcp(&transport.udp.unwrap().payload),
+        TransportProtocol::Udp => parse_udp(&transport.udp.unwrap().payload),
         unimplemented => Err(Error::UnimplementedError {
             layer: Layer::Application.to_string(),
             protocol: format!("{}", unimplemented).to_lowercase(),
