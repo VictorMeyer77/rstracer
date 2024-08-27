@@ -71,8 +71,7 @@ fn parse_tcp(packet: &[u8]) -> Result<Application, Error> {
     }
     Err(Error::PacketParseError {
         layer: Layer::Application.to_string(),
-        protocol: "".to_string(),
-        data: packet.to_vec(),
+        protocol: "unknown".to_string(),
     })
 }
 
@@ -83,8 +82,7 @@ fn parse_udp(packet: &[u8]) -> Result<Application, Error> {
     }
     Err(Error::PacketParseError {
         layer: Layer::Application.to_string(),
-        protocol: "".to_string(),
-        data: packet.to_vec(),
+        protocol: "unknown".to_string(),
     })
 }
 

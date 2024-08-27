@@ -36,7 +36,7 @@ pub fn read_packet(packet: &[u8]) -> Result<DataLink, Error> {
     } else {
         Err(Error::UnimplementedError {
             layer: Layer::DataLink.to_string(),
-            protocol: "".to_string(),
+            protocol: "unknown".to_string(),
         })
     }
 }
@@ -74,7 +74,7 @@ mod tests {
             match error {
                 Error::UnimplementedError { layer, protocol } => {
                     assert_eq!(layer, "data_link");
-                    assert_eq!(protocol, "");
+                    assert_eq!(protocol, "unknown");
                 }
                 _ => panic!("Unexpected error type"),
             }

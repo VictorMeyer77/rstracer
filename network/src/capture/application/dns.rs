@@ -73,7 +73,6 @@ impl Dns {
         Err(Error::PacketParseError {
             layer: Layer::Application.to_string(),
             protocol: ApplicationProtocol::Dns.to_string(),
-            data: vec![],
         })
     }
 

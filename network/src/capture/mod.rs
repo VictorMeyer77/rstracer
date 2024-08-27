@@ -70,17 +70,14 @@ impl Capture {
                                 }
                                 capture.transport = Some(transport)
                             }
-                            Err(Error::NoLayerError) => return Ok(capture),
                             Err(error) => return Err(error),
                         }
                         capture.network = Some(network)
                     }
-                    Err(Error::NoLayerError) => return Ok(capture),
                     Err(error) => return Err(error),
                 }
                 capture.data_link = Some(data_link);
             }
-            Err(Error::NoLayerError) => return Ok(capture),
             Err(error) => return Err(error),
         }
 

@@ -73,7 +73,6 @@ fn parse_arp(packet: &[u8]) -> Result<Network, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Network.to_string(),
             protocol: NetworkProtocol::Arp.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -85,7 +84,6 @@ fn parse_ipv4(packet: &[u8]) -> Result<Network, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Network.to_string(),
             protocol: NetworkProtocol::Ipv4.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -97,7 +95,6 @@ fn parse_ipv6(packet: &[u8]) -> Result<Network, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Network.to_string(),
             protocol: NetworkProtocol::Ipv6.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -154,14 +151,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Network.to_string());
                 assert_eq!(protocol, NetworkProtocol::Arp.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -189,14 +181,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Network.to_string());
                 assert_eq!(protocol, NetworkProtocol::Ipv4.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -223,14 +210,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Network.to_string());
                 assert_eq!(protocol, NetworkProtocol::Ipv6.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }

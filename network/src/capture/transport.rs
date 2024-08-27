@@ -90,7 +90,6 @@ fn parse_tcp(packet: &[u8]) -> Result<Transport, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Transport.to_string(),
             protocol: TransportProtocol::Tcp.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -102,7 +101,6 @@ fn parse_udp(packet: &[u8]) -> Result<Transport, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Transport.to_string(),
             protocol: TransportProtocol::Udp.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -114,7 +112,6 @@ fn parse_icmpv4(packet: &[u8]) -> Result<Transport, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Transport.to_string(),
             protocol: TransportProtocol::Icmpv4.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
@@ -126,14 +123,12 @@ fn parse_icmpv6(packet: &[u8]) -> Result<Transport, Error> {
         Err(Error::PacketParseError {
             layer: Layer::Transport.to_string(),
             protocol: TransportProtocol::Icmpv6.to_string(),
-            data: packet.to_vec(),
         })
     }
 }
 
 pub fn read_packet(network: &Network) -> Result<Transport, Error> {
-    match network.protocol {
-        NetworkProtocol::Arp => Err(Error::NoLayerError),
+    match &network.protocol {
         NetworkProtocol::Ipv4 => {
             let ipv4 = network.ipv4.clone().unwrap();
             match ipv4.next_level_protocol {
@@ -158,6 +153,10 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
                 }),
             }
         }
+        unimplemented => Err(Error::UnimplementedError {
+            layer: Layer::Transport.to_string(),
+            protocol: unimplemented.to_string(),
+        }),
     }
 }
 
@@ -204,14 +203,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, TransportProtocol::Tcp.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -243,14 +237,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, TransportProtocol::Udp.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -278,14 +267,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, TransportProtocol::Icmpv4.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -313,14 +297,9 @@ mod tests {
 
         let error = result.err().unwrap();
         match error {
-            Error::PacketParseError {
-                layer,
-                protocol,
-                data,
-            } => {
+            Error::PacketParseError { layer, protocol } => {
                 assert_eq!(layer, Layer::Transport.to_string());
                 assert_eq!(protocol, TransportProtocol::Icmpv6.to_string());
-                assert_eq!(data, invalid_payload.to_vec());
             }
             _ => panic!("Unexpected error type"),
         }
@@ -466,9 +445,9 @@ mod tests {
         assert!(result.is_err());
 
         let error = result.err().unwrap();
-        match error {
-            Error::NoLayerError => {}
-            _ => panic!("Unexpected error type"),
-        }
+        assert_eq!(
+            error.to_string(),
+            "Protocol arp on layer transport is not implemented yet"
+        )
     }
 }

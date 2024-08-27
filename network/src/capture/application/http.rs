@@ -127,7 +127,8 @@ impl FromStr for HttpVersion {
 impl Http {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if !bytes.is_empty() {
-            let utf_packet = String::from_utf8(bytes.to_vec()).map_err(|_| Error::NomParsing)?;
+            let utf_packet =
+                String::from_utf8(bytes.to_vec()).map_err(|_| Error::ApplicationParsing)?;
             let rows: Vec<&str> = utf_packet.split("\r\n").collect();
             if let Some(empty_line_index) = rows.iter().position(|&x| x.is_empty()) {
                 return Ok(Http {
@@ -137,7 +138,7 @@ impl Http {
                 });
             }
         }
-        Err(Error::NomParsing)
+        Err(Error::ApplicationParsing)
     }
 }
 
@@ -173,8 +174,8 @@ impl HttpInstruction {
 
     fn request_from_str(row: &str) -> Result<HttpInstruction, Error> {
         let fields: Vec<&str> = row.split_whitespace().collect();
-        let method = HttpMethod::from_str(fields[0]).map_err(|_| Error::NomParsing)?;
-        let version = HttpVersion::from_str(fields[2]).map_err(|_| Error::NomParsing)?;
+        let method = HttpMethod::from_str(fields[0]).map_err(|_| Error::ApplicationParsing)?;
+        let version = HttpVersion::from_str(fields[2]).map_err(|_| Error::ApplicationParsing)?;
         Ok(HttpInstruction::request(
             method,
             fields[1].to_string(),
@@ -184,8 +185,10 @@ impl HttpInstruction {
 
     fn response_from_str(row: &str) -> Result<HttpInstruction, Error> {
         let fields: Vec<&str> = row.split_whitespace().collect();
-        let version = HttpVersion::from_str(fields[0]).map_err(|_| Error::NomParsing)?;
-        let status_code = fields[1].parse::<u16>().map_err(|_| Error::NomParsing)?;
+        let version = HttpVersion::from_str(fields[0]).map_err(|_| Error::ApplicationParsing)?;
+        let status_code = fields[1]
+            .parse::<u16>()
+            .map_err(|_| Error::ApplicationParsing)?;
         Ok(HttpInstruction::response(
             version,
             status_code,
@@ -202,7 +205,7 @@ impl HttpHeader {
             .collect();
 
         if headers.iter().filter(|header| header.len() != 2).count() > 0 {
-            Err(Error::NomParsing)
+            Err(Error::ApplicationParsing)
         } else {
             Ok(HttpHeader {
                 headers: headers
