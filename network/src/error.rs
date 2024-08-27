@@ -22,6 +22,8 @@ pub enum Error {
     Pcap(#[from] pcap::Error),
     #[error("Channel error: {0}")]
     Channel(#[from] Box<SendError<Capture>>),
+    #[error("")]
+    NomParsing,
 }
 
 pub fn handle_error(err: Error) {
@@ -46,5 +48,6 @@ pub fn handle_error(err: Error) {
                 panic!("{}", err)
             }
         },
+        Error::NomParsing => {}
     }
 }
