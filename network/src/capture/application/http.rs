@@ -235,6 +235,40 @@ pub mod tests {
     }
 
     #[test]
+    fn test_display_all_methods() {
+        let test_cases = [
+            (HttpMethod::Get, "get"),
+            (HttpMethod::Post, "post"),
+            (HttpMethod::Put, "put"),
+            (HttpMethod::Delete, "delete"),
+            (HttpMethod::Patch, "patch"),
+            (HttpMethod::Options, "options"),
+            (HttpMethod::Head, "head"),
+            (HttpMethod::Connect, "connect"),
+            (HttpMethod::Trace, "trace"),
+        ];
+
+        for (method, expected) in test_cases.iter() {
+            assert_eq!(format!("{}", method), *expected);
+        }
+    }
+
+    #[test]
+    fn test_display_http_versions() {
+        let test_cases = [
+            (HttpVersion::V0_9, "HTTP/0.9"),
+            (HttpVersion::V1_0, "HTTP/1.0"),
+            (HttpVersion::V1_1, "HTTP/1.1"),
+            (HttpVersion::V2, "HTTP/2"),
+            (HttpVersion::V3, "HTTP/3"),
+        ];
+
+        for (version, expected) in test_cases.iter() {
+            assert_eq!(format!("{}", version), *expected);
+        }
+    }
+
+    #[test]
     fn test_http_instruction_request_from_str() {
         let instruction = "GET /websiteos/example.com HTTP/1.1";
         let instruction = HttpInstruction::from_str(instruction).unwrap();
