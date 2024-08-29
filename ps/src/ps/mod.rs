@@ -1,12 +1,10 @@
 use crate::ps::error::Error;
 use crate::ps::unix::Unix;
-use log::warn;
 use std::env::consts;
 use std::process::Output;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
-// TODO: remove useless features tokio
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
 
@@ -23,7 +21,7 @@ pub struct Process {
     pub pmem: f32,       // Memory usage percentage
     pub status: String,  // Process status
     pub command: String, // Command with all its arguments
-    pub date_exec: i64,  // Timestamp command execution
+    pub created_at: i64, // Timestamp command execution
 }
 
 pub trait Ps {
@@ -34,7 +32,9 @@ pub trait Ps {
             if let Ok(process) = Self::parse_row(row) {
                 processes.push(process)
             } else {
-                warn!("Process could not be parse {}", row)
+                return Err(Error::ParseProcess {
+                    process: row.to_string(),
+                });
             }
         }
         Ok(processes)
@@ -79,21 +79,21 @@ mod tests {
     use crate::ps::{producer, Process};
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use tokio::join;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
     use tokio::time::{sleep, Duration};
-    use tokio::{join, task};
 
     #[tokio::test]
-    async fn producer_integration_test() {
+    async fn test_producer_integration() {
         let (sender, mut receiver): (Sender<Process>, Receiver<Process>) = channel(256);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
 
-        let producer_task = task::spawn(async move {
+        let producer_task = tokio::spawn(async move {
             producer(sender, stop_flag_clone, 1).await.unwrap();
         });
 
-        let stop_task = task::spawn(async move {
+        let stop_task = tokio::spawn(async move {
             sleep(Duration::from_secs(1)).await;
             stop_flag.store(true, Ordering::Release);
         });
@@ -108,10 +108,5 @@ mod tests {
         stop_task_result.unwrap();
 
         assert!(processes.len() > 100);
-        // todo
-        /*assert_eq!(
-            processes.last().unwrap().command,
-            "ps -eo pid,ppid,uid,lstart,pcpu,pmem,stat,args"
-        )*/
     }
 }

@@ -23,7 +23,7 @@ impl Ps for Unix {
             pmem: chunks[9].parse()?,
             status: chunks[10].to_string(),
             command: chunks[11..].join(" "),
-            date_exec: Local::now().timestamp_micros(),
+            created_at: Local::now().timestamp_micros(),
         })
     }
 
@@ -41,19 +41,40 @@ impl Ps for Unix {
 mod tests {
     use crate::ps::unix::Unix;
     use crate::ps::Ps;
-    use std::env::consts;
 
-    #[test]
-    fn unix_integration_test() {
-        if ["linux", "macos"].contains(&consts::OS) {
-            let processes = Unix::exec().unwrap();
-            assert!(processes.len() > 10);
-            /*assert_eq!(
-                processes.last().unwrap().command,
-                "ps -eo pid,ppid,uid,lstart,pcpu,pmem,stat,args"
-            )*/
-        }
+    fn create_ps_output() -> String {
+        "PID  PPID   UID                          STARTED %CPU %MEM STAT COMMAND
+    1     0     0 Tue Aug 29 08:01:10 2023  0.1  0.3 Ss   /sbin/init
+ 1234     1  1000 Tue Aug 29 09:05:12 2023  0.0  1.2 S    /usr/lib/xorg/Xorg :0 -seat seat0 -auth /run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch
+ 5678  1234  1000 Tue Aug 29 09:15:05 2023  0.2  0.5 R    /usr/bin/python3 /home/user/script.py
+ 9101  5678  1000 Tue Aug 29 10:00:02 2023  0.0  0.1 S    /bin/bash
+".to_string()
     }
 
-    // TODO: write unit tests
+    #[test]
+    fn test_parse_output() {
+        let processes = Unix::parse_output(&create_ps_output()).unwrap();
+        assert_eq!(processes.len(), 4);
+        assert_eq!(processes.last().unwrap().pid, 9101);
+        assert_eq!(processes[1].command, "/usr/lib/xorg/Xorg :0 -seat seat0 -auth /run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch")
+    }
+
+    #[test]
+    fn test_parse_row() {
+        let row = "1234     1  1000 Tue Aug 29 09:05:12 2023  0.0  1.2 S    /usr/lib/xorg/Xorg :0 -seat seat0 -auth /run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch";
+        let process = Unix::parse_row(row).unwrap();
+        assert_eq!(process.pid, 1234);
+        assert_eq!(process.ppid, 1);
+        assert_eq!(process.uid, 1000);
+        assert_eq!(process.pcpu, 0.0);
+        assert_eq!(process.pmem, 1.2);
+        assert_eq!(process.status, "S");
+        assert_eq!(process.command, "/usr/lib/xorg/Xorg :0 -seat seat0 -auth /run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch");
+    }
+
+    #[test]
+    fn test_parse_date() {
+        let date_chunks: Vec<&str> = "Tue Aug 29 08:01:10 2023".split_whitespace().collect();
+        assert_eq!(Unix::parse_date(&date_chunks).unwrap(), 1693296070);
+    }
 }

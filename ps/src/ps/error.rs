@@ -15,6 +15,8 @@ pub enum Error {
     ParseInt(#[from] num::ParseIntError),
     #[error("Error parsing float: {0}")]
     ParseFloat(#[from] num::ParseFloatError),
+    #[error("Error parsing process: {process:}")]
+    ParseProcess { process: String },
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
     #[error("Channel error: {0}")]
