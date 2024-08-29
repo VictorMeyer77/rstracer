@@ -62,7 +62,7 @@ impl Tls {
         if let Ok((bytes, (content_type, version, length))) = Self::parse_header_bytes(bytes) {
             Ok(Self::new(content_type, version, length, bytes)?)
         } else {
-            Err(Error::ApplicationParsing)
+            Err(Error::PacketParsing)
         }
     }
 
@@ -77,7 +77,7 @@ impl Tls {
                 });
             }
         }
-        Err(Error::ApplicationParsing)
+        Err(Error::PacketParsing)
     }
 
     fn parse_header_bytes(bytes: &[u8]) -> IResult<&[u8], (u8, u16, u16)> {

@@ -83,48 +83,20 @@ impl Transport {
     }
 }
 
-fn parse_tcp(packet: &[u8]) -> Result<Transport, Error> {
-    if let Some(tcp) = TcpPacket::new(packet) {
-        Ok(Transport::tcp(tcp.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Transport.to_string(),
-            protocol: TransportProtocol::Tcp.to_string(),
-        })
-    }
+fn parse_tcp(packet: &[u8]) -> Option<Transport> {
+    TcpPacket::new(packet).map(|tcp| Transport::tcp(tcp.from_packet()))
 }
 
-fn parse_udp(packet: &[u8]) -> Result<Transport, Error> {
-    if let Some(udp) = UdpPacket::new(packet) {
-        Ok(Transport::udp(udp.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Transport.to_string(),
-            protocol: TransportProtocol::Udp.to_string(),
-        })
-    }
+fn parse_udp(packet: &[u8]) -> Option<Transport> {
+    UdpPacket::new(packet).map(|udp| Transport::udp(udp.from_packet()))
 }
 
-fn parse_icmpv4(packet: &[u8]) -> Result<Transport, Error> {
-    if let Some(icmpv4) = IcmpPacket::new(packet) {
-        Ok(Transport::icmpv4(icmpv4.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Transport.to_string(),
-            protocol: TransportProtocol::Icmpv4.to_string(),
-        })
-    }
+fn parse_icmpv4(packet: &[u8]) -> Option<Transport> {
+    IcmpPacket::new(packet).map(|icmpv4| Transport::icmpv4(icmpv4.from_packet()))
 }
 
-fn parse_icmpv6(packet: &[u8]) -> Result<Transport, Error> {
-    if let Some(icmpv6) = Icmpv6Packet::new(packet) {
-        Ok(Transport::icmpv6(icmpv6.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Transport.to_string(),
-            protocol: TransportProtocol::Icmpv6.to_string(),
-        })
-    }
+fn parse_icmpv6(packet: &[u8]) -> Option<Transport> {
+    Icmpv6Packet::new(packet).map(|icmpv6| Transport::icmpv6(icmpv6.from_packet()))
 }
 
 pub fn read_packet(network: &Network) -> Result<Transport, Error> {
@@ -132,9 +104,11 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
         NetworkProtocol::Ipv4 => {
             let ipv4 = network.ipv4.clone().unwrap();
             match ipv4.next_level_protocol {
-                IpNextHeaderProtocols::Tcp => parse_tcp(&ipv4.payload),
-                IpNextHeaderProtocols::Udp => parse_udp(&ipv4.payload),
-                IpNextHeaderProtocols::Icmp => parse_icmpv4(&ipv4.payload),
+                IpNextHeaderProtocols::Tcp => parse_tcp(&ipv4.payload).ok_or(Error::PacketParsing),
+                IpNextHeaderProtocols::Udp => parse_udp(&ipv4.payload).ok_or(Error::PacketParsing),
+                IpNextHeaderProtocols::Icmp => {
+                    parse_icmpv4(&ipv4.payload).ok_or(Error::PacketParsing)
+                }
                 unimplemented => Err(Error::UnimplementedError {
                     layer: Layer::Transport.to_string(),
                     protocol: unimplemented.to_string(),
@@ -144,9 +118,11 @@ pub fn read_packet(network: &Network) -> Result<Transport, Error> {
         NetworkProtocol::Ipv6 => {
             let ipv6 = network.ipv6.clone().unwrap();
             match ipv6.next_header {
-                IpNextHeaderProtocols::Tcp => parse_tcp(&ipv6.payload),
-                IpNextHeaderProtocols::Udp => parse_udp(&ipv6.payload),
-                IpNextHeaderProtocols::Icmpv6 => parse_icmpv6(&ipv6.payload),
+                IpNextHeaderProtocols::Tcp => parse_tcp(&ipv6.payload).ok_or(Error::PacketParsing),
+                IpNextHeaderProtocols::Udp => parse_udp(&ipv6.payload).ok_or(Error::PacketParsing),
+                IpNextHeaderProtocols::Icmpv6 => {
+                    parse_icmpv6(&ipv6.payload).ok_or(Error::PacketParsing)
+                }
                 unimplemented => Err(Error::UnimplementedError {
                     layer: Layer::Transport.to_string(),
                     protocol: unimplemented.to_string(),
@@ -183,12 +159,8 @@ mod tests {
         let packet = create_tcp_packet(12345, 80, payload);
         let ipv4_packet = Ipv4Packet::new(&packet[14..]).unwrap();
 
-        let result = parse_tcp(ipv4_packet.payload());
-        assert!(result.is_ok());
-
-        let transport = result.unwrap();
+        let transport = parse_tcp(ipv4_packet.payload()).unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Tcp);
-        assert!(transport.tcp.is_some());
 
         let tcp = transport.tcp.unwrap();
         assert_eq!(tcp.source, 12345);
@@ -199,16 +171,7 @@ mod tests {
     fn test_parse_tcp_invalid() {
         let invalid_payload = b"";
         let result = parse_tcp(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Transport.to_string());
-                assert_eq!(protocol, TransportProtocol::Tcp.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]
@@ -217,12 +180,8 @@ mod tests {
         let packet = create_udp_packet(54321, 53, payload);
         let ipv4_packet = Ipv4Packet::new(&packet[14..]).unwrap();
 
-        let result = parse_udp(ipv4_packet.payload());
-        assert!(result.is_ok());
-
-        let transport = result.unwrap();
+        let transport = parse_udp(ipv4_packet.payload()).unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Udp);
-        assert!(transport.udp.is_some());
 
         let udp = transport.udp.unwrap();
         assert_eq!(udp.source, 54321);
@@ -233,16 +192,7 @@ mod tests {
     fn test_parse_udp_invalid() {
         let invalid_payload = b"";
         let result = parse_udp(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Transport.to_string());
-                assert_eq!(protocol, TransportProtocol::Udp.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]
@@ -251,10 +201,7 @@ mod tests {
         let packet = create_icmpv4_packet(payload);
         let ipv4_packet = Ipv4Packet::new(&packet[14..]).unwrap();
 
-        let result = parse_icmpv4(ipv4_packet.payload());
-        assert!(result.is_ok());
-
-        let transport = result.unwrap();
+        let transport = parse_icmpv4(ipv4_packet.payload()).unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Icmpv4);
         assert!(transport.icmpv4.is_some());
     }
@@ -263,16 +210,7 @@ mod tests {
     fn test_parse_icmpv4_invalid() {
         let invalid_payload = b"";
         let result = parse_icmpv4(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Transport.to_string());
-                assert_eq!(protocol, TransportProtocol::Icmpv4.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]
@@ -281,10 +219,7 @@ mod tests {
         let packet = create_icmpv6_packet(payload);
         let ipv6_packet = Ipv6Packet::new(&packet[14..]).unwrap();
 
-        let result = parse_icmpv6(ipv6_packet.payload());
-        assert!(result.is_ok());
-
-        let transport = result.unwrap();
+        let transport = parse_icmpv6(ipv6_packet.payload()).unwrap();
         assert_eq!(transport.protocol, TransportProtocol::Icmpv6);
         assert!(transport.icmpv6.is_some());
     }
@@ -293,16 +228,7 @@ mod tests {
     fn test_parse_icmpv6_invalid() {
         let invalid_payload = b"";
         let result = parse_icmpv6(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Transport.to_string());
-                assert_eq!(protocol, TransportProtocol::Icmpv6.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]

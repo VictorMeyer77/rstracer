@@ -127,8 +127,7 @@ impl FromStr for HttpVersion {
 impl Http {
     pub fn from_bytes(bytes: &[u8]) -> Result<Self, Error> {
         if !bytes.is_empty() {
-            let utf_packet =
-                String::from_utf8(bytes.to_vec()).map_err(|_| Error::ApplicationParsing)?;
+            let utf_packet = String::from_utf8(bytes.to_vec()).map_err(|_| Error::PacketParsing)?;
             let rows: Vec<&str> = utf_packet.split("\r\n").collect();
             if let Some(empty_line_index) = rows.iter().position(|&x| x.is_empty()) {
                 return Ok(Http {
@@ -138,7 +137,7 @@ impl Http {
                 });
             }
         }
-        Err(Error::ApplicationParsing)
+        Err(Error::PacketParsing)
     }
 }
 
@@ -174,8 +173,8 @@ impl HttpInstruction {
 
     fn request_from_str(row: &str) -> Result<HttpInstruction, Error> {
         let fields: Vec<&str> = row.split_whitespace().collect();
-        let method = HttpMethod::from_str(fields[0]).map_err(|_| Error::ApplicationParsing)?;
-        let version = HttpVersion::from_str(fields[2]).map_err(|_| Error::ApplicationParsing)?;
+        let method = HttpMethod::from_str(fields[0]).map_err(|_| Error::PacketParsing)?;
+        let version = HttpVersion::from_str(fields[2]).map_err(|_| Error::PacketParsing)?;
         Ok(HttpInstruction::request(
             method,
             fields[1].to_string(),
@@ -185,10 +184,8 @@ impl HttpInstruction {
 
     fn response_from_str(row: &str) -> Result<HttpInstruction, Error> {
         let fields: Vec<&str> = row.split_whitespace().collect();
-        let version = HttpVersion::from_str(fields[0]).map_err(|_| Error::ApplicationParsing)?;
-        let status_code = fields[1]
-            .parse::<u16>()
-            .map_err(|_| Error::ApplicationParsing)?;
+        let version = HttpVersion::from_str(fields[0]).map_err(|_| Error::PacketParsing)?;
+        let status_code = fields[1].parse::<u16>().map_err(|_| Error::PacketParsing)?;
         Ok(HttpInstruction::response(
             version,
             status_code,
@@ -205,7 +202,7 @@ impl HttpHeader {
             .collect();
 
         if headers.iter().filter(|header| header.len() != 2).count() > 0 {
-            Err(Error::ApplicationParsing)
+            Err(Error::PacketParsing)
         } else {
             Ok(HttpHeader {
                 headers: headers

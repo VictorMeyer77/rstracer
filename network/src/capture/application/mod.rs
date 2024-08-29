@@ -68,52 +68,54 @@ impl Application {
     }
 }
 
-fn parse_dns(packet: &[u8]) -> Result<Application, Error> {
-    Ok(Application::dns(Dns::from_bytes(packet)?))
+fn parse_dns(packet: &[u8]) -> Option<Application> {
+    if let Ok(dns) = Dns::from_bytes(packet) {
+        Some(Application::dns(dns))
+    } else {
+        None
+    }
 }
 
-fn parse_http(packet: &[u8]) -> Result<Application, Error> {
-    Ok(Application::http(Http::from_bytes(packet)?))
+fn parse_http(packet: &[u8]) -> Option<Application> {
+    if let Ok(http) = Http::from_bytes(packet) {
+        Some(Application::http(http))
+    } else {
+        None
+    }
 }
 
-fn parse_tls(packet: &[u8]) -> Result<Application, Error> {
-    Ok(Application::tls(Tls::from_bytes(packet)?))
+fn parse_tls(packet: &[u8]) -> Option<Application> {
+    if let Ok(tls) = Tls::from_bytes(packet) {
+        Some(Application::tls(tls))
+    } else {
+        None
+    }
 }
 
-fn parse_tcp(packet: &[u8]) -> Result<Application, Error> {
-    let application = parse_dns(packet);
-    if application.is_ok() {
-        return application;
+fn parse_tcp(packet: &[u8]) -> Option<Application> {
+    let mut application = parse_dns(packet);
+    if application.is_none() {
+        application = parse_http(packet)
     }
-    let application = parse_http(packet);
-    if application.is_ok() {
-        return application;
+    if application.is_none() {
+        application = parse_tls(packet)
     }
-    if let Ok(application) = parse_tls(packet) {
-        return Ok(application);
-    }
-    Err(Error::PacketParseError {
-        layer: Layer::Application.to_string(),
-        protocol: "unknown".to_string(),
-    })
+    application
 }
 
-fn parse_udp(packet: &[u8]) -> Result<Application, Error> {
-    let application = parse_dns(packet);
-    if application.is_ok() {
-        return application;
-    }
-    Err(Error::PacketParseError {
-        layer: Layer::Application.to_string(),
-        protocol: "unknown".to_string(),
-    })
+fn parse_udp(packet: &[u8]) -> Option<Application> {
+    parse_dns(packet)
 }
 
 pub fn read_packet(transport: &Transport) -> Result<Application, Error> {
     let transport = transport.clone();
     match transport.protocol {
-        TransportProtocol::Tcp => parse_tcp(&transport.tcp.unwrap().payload),
-        TransportProtocol::Udp => parse_udp(&transport.udp.unwrap().payload),
+        TransportProtocol::Tcp => {
+            parse_tcp(&transport.tcp.unwrap().payload).ok_or(Error::PacketParsing)
+        }
+        TransportProtocol::Udp => {
+            parse_udp(&transport.udp.unwrap().payload).ok_or(Error::PacketParsing)
+        }
         unimplemented => Err(Error::UnimplementedError {
             layer: Layer::Application.to_string(),
             protocol: format!("{}", unimplemented).to_lowercase(),

@@ -66,37 +66,16 @@ impl Network {
     }
 }
 
-fn parse_arp(packet: &[u8]) -> Result<Network, Error> {
-    if let Some(arp) = ArpPacket::new(packet) {
-        Ok(Network::arp(arp.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Network.to_string(),
-            protocol: NetworkProtocol::Arp.to_string(),
-        })
-    }
+fn parse_arp(packet: &[u8]) -> Option<Network> {
+    ArpPacket::new(packet).map(|arp| Network::arp(arp.from_packet()))
 }
 
-fn parse_ipv4(packet: &[u8]) -> Result<Network, Error> {
-    if let Some(ipv4) = Ipv4Packet::new(packet) {
-        Ok(Network::ipv4(ipv4.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Network.to_string(),
-            protocol: NetworkProtocol::Ipv4.to_string(),
-        })
-    }
+fn parse_ipv4(packet: &[u8]) -> Option<Network> {
+    Ipv4Packet::new(packet).map(|ipv4| Network::ipv4(ipv4.from_packet()))
 }
 
-fn parse_ipv6(packet: &[u8]) -> Result<Network, Error> {
-    if let Some(ipv6) = Ipv6Packet::new(packet) {
-        Ok(Network::ipv6(ipv6.from_packet()))
-    } else {
-        Err(Error::PacketParseError {
-            layer: Layer::Network.to_string(),
-            protocol: NetworkProtocol::Ipv6.to_string(),
-        })
-    }
+fn parse_ipv6(packet: &[u8]) -> Option<Network> {
+    Ipv6Packet::new(packet).map(|ipv6| Network::ipv6(ipv6.from_packet()))
 }
 
 pub fn read_packet(data_link: &DataLink) -> Result<Network, Error> {
@@ -104,9 +83,9 @@ pub fn read_packet(data_link: &DataLink) -> Result<Network, Error> {
         DataLinkProtocol::Ethernet => {
             let ethernet = data_link.ethernet.clone().unwrap();
             match ethernet.ethertype {
-                EtherTypes::Ipv4 => parse_ipv4(&ethernet.payload),
-                EtherTypes::Ipv6 => parse_ipv6(&ethernet.payload),
-                EtherTypes::Arp => parse_arp(&ethernet.payload),
+                EtherTypes::Ipv4 => parse_ipv4(&ethernet.payload).ok_or(Error::PacketParsing),
+                EtherTypes::Ipv6 => parse_ipv6(&ethernet.payload).ok_or(Error::PacketParsing),
+                EtherTypes::Arp => parse_arp(&ethernet.payload).ok_or(Error::PacketParsing),
                 unimplemented => Err(Error::UnimplementedError {
                     layer: Layer::Network.to_string(),
                     protocol: format!("{}", unimplemented).to_lowercase(),
@@ -133,10 +112,8 @@ mod tests {
     #[test]
     fn test_parse_arp_valid() {
         let frame = create_arp_packet();
-        let result = parse_arp(&frame);
-        assert!(result.is_ok());
 
-        let network = result.unwrap();
+        let network = parse_arp(&frame).unwrap();
         assert_eq!(network.protocol, NetworkProtocol::Arp);
         assert!(network.arp.is_some());
         assert!(network.ipv4.is_none());
@@ -147,26 +124,14 @@ mod tests {
     fn test_parse_arp_invalid() {
         let invalid_payload = b"";
         let result = parse_arp(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Network.to_string());
-                assert_eq!(protocol, NetworkProtocol::Arp.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_ipv4_valid() {
         let frame = create_ipv4_packet(IpNextHeaderProtocols::Icmp, &[0u8; 20]);
 
-        let result = parse_ipv4(&frame);
-        assert!(result.is_ok());
-
-        let network = result.unwrap();
+        let network = parse_ipv4(&frame).unwrap();
         assert_eq!(network.protocol, NetworkProtocol::Ipv4);
         assert!(network.ipv4.is_some());
         assert!(network.arp.is_none());
@@ -177,25 +142,13 @@ mod tests {
     fn test_parse_icpv4_invalid() {
         let invalid_payload = b"";
         let result = parse_ipv4(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Network.to_string());
-                assert_eq!(protocol, NetworkProtocol::Ipv4.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]
     fn test_parse_ipv6_valid() {
         let frame = create_ipv6_packet(IpNextHeaderProtocols::Udp, &[0u8; 40]);
-        let result = parse_ipv6(&frame);
-        assert!(result.is_ok());
-
-        let network = result.unwrap();
+        let network = parse_ipv6(&frame).unwrap();
         assert_eq!(network.protocol, NetworkProtocol::Ipv6);
         assert!(network.ipv6.is_some());
         assert!(network.arp.is_none());
@@ -206,16 +159,7 @@ mod tests {
     fn test_parse_icpv6_invalid() {
         let invalid_payload = b"";
         let result = parse_ipv6(invalid_payload);
-        assert!(result.is_err());
-
-        let error = result.err().unwrap();
-        match error {
-            Error::PacketParseError { layer, protocol } => {
-                assert_eq!(layer, Layer::Network.to_string());
-                assert_eq!(protocol, NetworkProtocol::Ipv6.to_string());
-            }
-            _ => panic!("Unexpected error type"),
-        }
+        assert!(result.is_none());
     }
 
     #[test]

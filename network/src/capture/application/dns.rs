@@ -68,7 +68,7 @@ impl Dns {
                 }
             }
         }
-        Err(Error::ApplicationParsing)
+        Err(Error::PacketParsing)
     }
 
     fn parse_additional(bytes: &[u8]) -> IResult<&[u8], Vec<DnsRecord>> {
