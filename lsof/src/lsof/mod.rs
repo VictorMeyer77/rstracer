@@ -1,5 +1,6 @@
 use crate::lsof::error::Error;
 use crate::lsof::unix::Unix;
+use chrono::Local;
 use std::env::consts;
 use std::process::Output;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -24,6 +25,23 @@ pub struct OpenFile {
     pub node: String,    // Node
     pub name: String,    // Name
     pub date_exec: i64,  // Timestamp command execution
+}
+
+impl OpenFile {
+    pub fn new(pid: u32, uid: u32, command: &str) -> Self {
+        OpenFile {
+            command: command.to_string(),
+            pid,
+            uid,
+            fd: "".to_string(),
+            _type: "".to_string(),
+            device: "".to_string(),
+            size: 0,
+            node: "".to_string(),
+            name: "".to_string(),
+            date_exec: Local::now().timestamp_micros(),
+        }
+    }
 }
 
 pub trait Lsof {
@@ -67,22 +85,22 @@ mod tests {
     use crate::lsof::{producer, OpenFile};
     use std::sync::atomic::{AtomicBool, Ordering};
     use std::sync::Arc;
+    use tokio::join;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
     use tokio::time::{sleep, Duration};
-    use tokio::{join, task};
 
     #[tokio::test]
-    async fn producer_integration_test() {
+    async fn test_producer_integration() {
         let (sender, mut receiver): (Sender<OpenFile>, Receiver<OpenFile>) = channel(256);
         let stop_flag = Arc::new(AtomicBool::new(false));
         let stop_flag_clone = stop_flag.clone();
 
-        let producer_task = task::spawn(async move {
+        let producer_task = tokio::spawn(async move {
             producer(sender, stop_flag_clone, 1).await.unwrap();
         });
 
-        let stop_task = task::spawn(async move {
-            sleep(Duration::from_secs(1)).await;
+        let stop_task = tokio::spawn(async move {
+            sleep(Duration::from_secs(3)).await;
             stop_flag.store(true, Ordering::Release);
         });
 
