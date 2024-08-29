@@ -3,6 +3,7 @@ use crate::capture::data_link::DataLink;
 use crate::capture::network::Network;
 use crate::capture::transport::Transport;
 use crate::error::Error;
+use chrono::Local;
 use pcap::Device;
 use std::fmt;
 
@@ -23,6 +24,7 @@ pub enum Layer {
 pub struct Capture {
     pub device: Device,
     pub packet: Vec<u8>,
+    pub created_at: i64,
     pub data_link: Option<DataLink>,
     pub network: Option<Network>,
     pub transport: Option<Transport>,
@@ -49,6 +51,7 @@ impl Capture {
         Capture {
             device: device.clone(),
             packet: packet.to_vec(),
+            created_at: Local::now().timestamp_micros(),
             data_link: None,
             network: None,
             transport: None,

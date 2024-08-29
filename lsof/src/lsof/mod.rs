@@ -24,7 +24,7 @@ pub struct OpenFile {
     pub size: u32,       // Size
     pub node: String,    // Node
     pub name: String,    // Name
-    pub date_exec: i64,  // Timestamp command execution
+    pub created_at: i64, // Timestamp command execution
 }
 
 impl OpenFile {
@@ -39,7 +39,7 @@ impl OpenFile {
             size: 0,
             node: "".to_string(),
             name: "".to_string(),
-            date_exec: Local::now().timestamp_micros(),
+            created_at: Local::now().timestamp_micros(),
         }
     }
 }
