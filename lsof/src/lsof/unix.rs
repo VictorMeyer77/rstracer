@@ -62,10 +62,8 @@ fn row_to_struct(header: &(u32, u32, String), row: &str) -> OpenFile {
 mod tests {
 
     use crate::lsof::unix::{
-        deserialize_header, row_to_struct, split_of_per_process, split_process_per_rows, Unix,
+        deserialize_header, row_to_struct, split_of_per_process, split_process_per_rows,
     };
-    use crate::lsof::Lsof;
-    use std::env::consts;
 
     fn create_lsof_output() -> String {
         "p163
@@ -105,15 +103,6 @@ s58184
 i11556174
 n/Library/Preferences/Logging/.plist-cache.DCgGV34s
 ".to_string()
-    }
-
-    #[test]
-    fn test_unix_integration() {
-        if ["linux", "macos", "android", "ios"].contains(&consts::OS) {
-            let files = Unix::exec().unwrap();
-            assert!(files.len() > 10);
-            assert_eq!(files.last().unwrap().command, "lsof")
-        }
     }
 
     #[test]

@@ -11,8 +11,6 @@ use tokio::time::{sleep, Duration};
 pub mod error;
 pub mod unix;
 
-// TODO: implement windows
-
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct OpenFile {
     pub command: String, // Command
