@@ -1,5 +1,6 @@
 use crate::capture::application::dns::Dns;
 use crate::capture::application::http::Http;
+use crate::capture::application::tls::Tls;
 use crate::capture::transport::{Transport, TransportProtocol};
 use crate::capture::Layer;
 use crate::error::Error;
@@ -7,11 +8,13 @@ use std::fmt;
 
 pub mod dns;
 pub mod http;
+pub mod tls;
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum ApplicationProtocol {
     Dns,
     Http,
+    Tls,
 }
 
 #[derive(Debug, Clone)]
@@ -19,6 +22,7 @@ pub struct Application {
     pub protocol: ApplicationProtocol,
     pub dns: Option<Dns>,
     pub http: Option<Http>,
+    pub tls: Option<Tls>,
 }
 
 impl fmt::Display for ApplicationProtocol {
@@ -29,6 +33,7 @@ impl fmt::Display for ApplicationProtocol {
             match self {
                 ApplicationProtocol::Dns => "dns",
                 ApplicationProtocol::Http => "http",
+                ApplicationProtocol::Tls => "tls",
             }
         )
     }
@@ -40,6 +45,7 @@ impl Application {
             protocol: ApplicationProtocol::Dns,
             dns: Some(dns),
             http: None,
+            tls: None,
         }
     }
 
@@ -48,6 +54,16 @@ impl Application {
             protocol: ApplicationProtocol::Http,
             dns: None,
             http: Some(http),
+            tls: None,
+        }
+    }
+
+    fn tls(tls: Tls) -> Application {
+        Application {
+            protocol: ApplicationProtocol::Tls,
+            dns: None,
+            http: None,
+            tls: Some(tls),
         }
     }
 }
@@ -60,6 +76,10 @@ fn parse_http(packet: &[u8]) -> Result<Application, Error> {
     Ok(Application::http(Http::from_bytes(packet)?))
 }
 
+fn parse_tls(packet: &[u8]) -> Result<Application, Error> {
+    Ok(Application::tls(Tls::from_bytes(packet)?))
+}
+
 fn parse_tcp(packet: &[u8]) -> Result<Application, Error> {
     let application = parse_dns(packet);
     if application.is_ok() {
@@ -68,6 +88,9 @@ fn parse_tcp(packet: &[u8]) -> Result<Application, Error> {
     let application = parse_http(packet);
     if application.is_ok() {
         return application;
+    }
+    if let Ok(application) = parse_tls(packet) {
+        return Ok(application);
     }
     Err(Error::PacketParseError {
         layer: Layer::Application.to_string(),
@@ -103,6 +126,7 @@ mod tests {
     use super::*;
     use crate::capture::application::dns::tests::create_dns_packet;
     use crate::capture::application::http::tests::create_http_packet;
+    use crate::capture::application::tls::TlsContentType;
     use pnet::packet::tcp::Tcp;
     use pnet::packet::udp::Udp;
 
@@ -157,10 +181,7 @@ mod tests {
         let dns_bytes = create_dns_packet();
         let transport = create_mock_tcp_transport(&dns_bytes);
 
-        let result = read_packet(&transport);
-        assert!(result.is_ok());
-
-        let application = result.unwrap();
+        let application = read_packet(&transport).unwrap();
         assert_eq!(application.protocol, ApplicationProtocol::Dns);
         assert_eq!(application.dns.unwrap().question.qname, "www.example.com");
     }
@@ -170,10 +191,7 @@ mod tests {
         let dns_bytes = create_dns_packet();
         let transport = create_mock_udp_transport(&dns_bytes);
 
-        let result = read_packet(&transport);
-        assert!(result.is_ok());
-
-        let application = result.unwrap();
+        let application = read_packet(&transport).unwrap();
         assert_eq!(application.protocol, ApplicationProtocol::Dns);
         assert_eq!(application.dns.unwrap().question.qname, "www.example.com");
     }
@@ -183,11 +201,22 @@ mod tests {
         let http_bytes = create_http_packet();
         let transport = create_mock_tcp_transport(&http_bytes);
 
-        let result = read_packet(&transport);
-        assert!(result.is_ok());
-
-        let application = result.unwrap();
+        let application = read_packet(&transport).unwrap();
         assert_eq!(application.protocol, ApplicationProtocol::Http);
         assert_eq!(application.http.unwrap().body, "name=ChatGPT&language=Rust");
+    }
+
+    #[test]
+    fn test_read_packet_tcp_tls() {
+        let tls_bytes = [0x16, 0x03, 0x03, 0x00, 0x05, 0x01, 0x02, 0x03, 0x04, 0x05];
+        let transport = create_mock_tcp_transport(&tls_bytes);
+
+        let application = read_packet(&transport).unwrap();
+
+        assert_eq!(application.protocol, ApplicationProtocol::Tls);
+        assert_eq!(
+            application.tls.unwrap().content_type,
+            TlsContentType::Handshake
+        );
     }
 }

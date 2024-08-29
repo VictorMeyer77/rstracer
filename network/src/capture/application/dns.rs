@@ -1,5 +1,3 @@
-use crate::capture::application::ApplicationProtocol;
-use crate::capture::Layer;
 use crate::error::Error;
 use nom::bytes::complete::take;
 use nom::number::complete::{be_u16, be_u32};
@@ -70,10 +68,7 @@ impl Dns {
                 }
             }
         }
-        Err(Error::PacketParseError {
-            layer: Layer::Application.to_string(),
-            protocol: ApplicationProtocol::Dns.to_string(),
-        })
+        Err(Error::ApplicationParsing)
     }
 
     fn parse_additional(bytes: &[u8]) -> IResult<&[u8], Vec<DnsRecord>> {
