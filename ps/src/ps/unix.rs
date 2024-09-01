@@ -23,7 +23,7 @@ impl Ps for Unix {
             pmem: chunks[9].parse()?,
             status: chunks[10].to_string(),
             command: chunks[11..].join(" "),
-            created_at: Local::now().timestamp_micros(),
+            created_at: Local::now().timestamp_millis(),
         })
     }
 
