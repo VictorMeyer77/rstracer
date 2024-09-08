@@ -70,7 +70,7 @@ pub async fn producer(sender: Sender<Log>, stop_flag: Arc<AtomicBool>) -> Result
             sender
                 .send(Log {
                     file: line.source().canonicalize()?.to_str().unwrap().to_string(),
-                    date: Local::now().timestamp_micros(),
+                    date: Local::now().timestamp(),
                     row: line.line().to_string(),
                 })
                 .await?;
@@ -91,9 +91,9 @@ mod tests {
     use std::{env, fs};
     use tokio::fs::OpenOptions;
     use tokio::io::AsyncWriteExt;
+    use tokio::join;
     use tokio::sync::mpsc::{channel, Receiver, Sender};
     use tokio::time::sleep;
-    use tokio::{join, task};
 
     // TODO: replace with arg funct
     fn set_test_env() {
@@ -118,8 +118,8 @@ mod tests {
         let stop_flag_clone = stop_flag.clone();
 
         let producer_task =
-            task::spawn(async move { producer(sender, stop_flag_clone).await.unwrap() });
-        let write_file_task = task::spawn(async move {
+            tokio::spawn(async move { producer(sender, stop_flag_clone).await.unwrap() });
+        let write_file_task = tokio::spawn(async move {
             let mut file = OpenOptions::new()
                 .append(true)
                 .open(TEST_LOG_FILES[0])

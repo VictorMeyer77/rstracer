@@ -37,7 +37,7 @@ impl OpenFile {
             size: 0,
             node: "".to_string(),
             name: "".to_string(),
-            created_at: Local::now().timestamp_millis(),
+            created_at: Local::now().timestamp(),
         }
     }
 }
