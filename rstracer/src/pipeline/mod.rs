@@ -1,0 +1,151 @@
+use crate::config::Config;
+use crate::pipeline::database::execute_request;
+use crate::pipeline::error::Error;
+use crate::pipeline::stage::bronze::Bronze;
+use crate::pipeline::stage::schema::Schema;
+use crate::pipeline::stage::silver::silver_request;
+use crate::pipeline::stage::vacuum::vacuum_request;
+use chrono::Local;
+use ps::ps::Process;
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Arc;
+use std::time::Duration;
+use tokio::sync::mpsc::{Receiver, Sender};
+use tokio::time::timeout;
+use tracing::{info, warn};
+
+pub mod database;
+pub mod error;
+pub mod stage;
+
+pub async fn execute_request_task(
+    receiver_request: Receiver<String>,
+    stop_flag: Arc<AtomicBool>,
+    batch_size: usize,
+) -> Result<(), Error> {
+    let mut receiver_request = receiver_request;
+
+    while !stop_flag.load(Ordering::Relaxed) {
+        let mut request_buffer: Vec<String> = Vec::with_capacity(batch_size);
+
+        info!(
+            "sql request receiver contains {} elements",
+            receiver_request.len()
+        );
+        match timeout(
+            Duration::from_millis(10), // todo cehck
+            receiver_request.recv_many(&mut request_buffer, batch_size),
+        )
+        .await
+        {
+            Ok(_) => {
+                info!("batch read {} / {} sql", request_buffer.len(), batch_size);
+                let start = Local::now().timestamp_millis();
+                execute_request(&request_buffer.join(" "))?;
+                let duration = Local::now().timestamp_millis() - start;
+                info!(
+                    "batch execute sql requests in {} s",
+                    duration as f32 / 1000.0
+                );
+            }
+            Err(_) => {
+                info!("sql request timeout triggered")
+            }
+        }
+    }
+
+    info!("consumer stop gracefully");
+
+    Ok(())
+}
+
+pub async fn schedule_request_task(
+    config: Config,
+    schema: Schema,
+    sender_request: Sender<String>,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let mut tasks: HashMap<(&str, String, u64), i64> = HashMap::new();
+    tasks.insert(
+        ("silver", silver_request(), config.schedule.silver),
+        Local::now().timestamp(),
+    );
+    tasks.insert(
+        (
+            "vacuum",
+            vacuum_request(config.vacuum, schema),
+            config.schedule.vacuum,
+        ),
+        Local::now().timestamp(),
+    );
+
+    while !stop_flag.load(Ordering::Relaxed) {
+        for (task, executed_at) in tasks.iter_mut() {
+            if Local::now().timestamp() > *executed_at + task.2 as i64 {
+                if let Err(e) = sender_request.send(task.1.clone()).await {
+                    warn!("{}", e);
+                } else {
+                    *executed_at = Local::now().timestamp();
+                    info!("{} sql request sent", task.0);
+                }
+            }
+        }
+    }
+
+    info!("consumer stop gracefully");
+    Ok(())
+}
+
+pub async fn process_sink_task(
+    batch_size: usize,
+    receiver_process: Receiver<Process>,
+    sender_request: Sender<String>,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let mut receiver_process = receiver_process;
+
+    while !stop_flag.load(Ordering::Relaxed) {
+        let mut process_buffer: Vec<Process> = Vec::with_capacity(batch_size);
+
+        info!(
+            "process receiver contains {} elements",
+            receiver_process.len()
+        );
+
+        match timeout(
+            Duration::from_secs(1),
+            receiver_process.recv_many(&mut process_buffer, batch_size),
+        )
+        .await
+        {
+            Ok(_) => {
+                let length = process_buffer.len();
+                info!("process batch read {} / {}", length, batch_size);
+                let start = Local::now().timestamp_millis();
+
+                let process_sql: Vec<String> = process_buffer
+                    .iter()
+                    .map(|process| process.to_sql())
+                    .collect();
+                if let Err(e) = sender_request.send(process_sql.join(" ")).await {
+                    warn!("{}", e);
+                }
+
+                let duration = Local::now().timestamp_millis() - start;
+                info!(
+                    "sent {} process sql in {} s",
+                    length,
+                    duration as f32 / 1000.0
+                );
+            }
+            Err(_) => {
+                info!("process timeout triggered")
+            }
+        }
+    }
+
+    info!("process producer stop gracefully");
+
+    Ok(())
+}

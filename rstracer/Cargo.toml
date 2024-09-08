@@ -1,0 +1,16 @@
+[package]
+name = "rstracer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = "0.4"
+config = "0.14.0"
+duckdb = { version = "1.0.0", features = ["bundled"] }
+lazy_static = "1.5.0"
+ps = { path = "../ps"}
+serde = { version = "1.0.208", features = ["derive"] }
+thiserror = "1.0.63"
+tokio = { version = "1.39.2", features = ["full"] }
+tracing = "0.1"
+tracing-subscriber = "0.3.18"

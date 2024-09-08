@@ -1,0 +1,27 @@
+
+disk_file_path = "/Users/victormeyer/Dev/Self/rstracer/rstracer/test.duckdb"
+
+[persist_layer]
+bronze = true
+silver = true
+gold = true
+
+[load_layer]
+bronze = true
+silver = true
+gold = true
+
+[vacuum]
+bronze = 30
+silver = 120
+gold = 0
+
+[schedule]
+silver = 5
+gold = 0
+vacuum = 10
+
+[ps]
+channel_size = 100
+producer_frequency = 1
+consumer_batch_size = 50
