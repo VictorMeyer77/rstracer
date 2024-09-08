@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::Bronze;
@@ -12,35 +12,41 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::time::timeout;
+use tokio::time::{sleep, timeout};
 use tracing::{info, warn};
 
 pub mod database;
 pub mod error;
 pub mod stage;
 
+const TIMEOUT_MS: u64 = 1000;
+
 pub async fn execute_request_task(
+    config: &ChannelConfig,
     receiver_request: Receiver<String>,
     stop_flag: Arc<AtomicBool>,
-    batch_size: usize,
 ) -> Result<(), Error> {
     let mut receiver_request = receiver_request;
 
     while !stop_flag.load(Ordering::Relaxed) {
-        let mut request_buffer: Vec<String> = Vec::with_capacity(batch_size);
+        let mut request_buffer: Vec<String> = Vec::with_capacity(config.consumer_batch_size);
 
         info!(
             "sql request receiver contains {} elements",
             receiver_request.len()
         );
         match timeout(
-            Duration::from_millis(10), // todo cehck
-            receiver_request.recv_many(&mut request_buffer, batch_size),
+            Duration::from_millis(TIMEOUT_MS),
+            receiver_request.recv_many(&mut request_buffer, config.consumer_batch_size),
         )
         .await
         {
             Ok(_) => {
-                info!("batch read {} / {} sql", request_buffer.len(), batch_size);
+                info!(
+                    "batch read {} / {} sql",
+                    request_buffer.len(),
+                    config.consumer_batch_size
+                );
                 let start = Local::now().timestamp_millis();
                 execute_request(&request_buffer.join(" "))?;
                 let duration = Local::now().timestamp_millis() - start;
@@ -61,7 +67,7 @@ pub async fn execute_request_task(
 }
 
 pub async fn schedule_request_task(
-    config: Config,
+    config: &Config,
     schema: Schema,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
@@ -74,7 +80,7 @@ pub async fn schedule_request_task(
     tasks.insert(
         (
             "vacuum",
-            vacuum_request(config.vacuum, schema),
+            vacuum_request(config.vacuum.clone(), schema),
             config.schedule.vacuum,
         ),
         Local::now().timestamp(),
@@ -91,6 +97,8 @@ pub async fn schedule_request_task(
                 }
             }
         }
+
+        sleep(Duration::from_millis(1000)).await;
     }
 
     info!("consumer stop gracefully");
@@ -98,7 +106,7 @@ pub async fn schedule_request_task(
 }
 
 pub async fn process_sink_task(
-    batch_size: usize,
+    config: &ChannelConfig,
     receiver_process: Receiver<Process>,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
@@ -106,7 +114,7 @@ pub async fn process_sink_task(
     let mut receiver_process = receiver_process;
 
     while !stop_flag.load(Ordering::Relaxed) {
-        let mut process_buffer: Vec<Process> = Vec::with_capacity(batch_size);
+        let mut process_buffer: Vec<Process> = Vec::with_capacity(config.consumer_batch_size);
 
         info!(
             "process receiver contains {} elements",
@@ -114,14 +122,17 @@ pub async fn process_sink_task(
         );
 
         match timeout(
-            Duration::from_secs(1),
-            receiver_process.recv_many(&mut process_buffer, batch_size),
+            Duration::from_millis(TIMEOUT_MS),
+            receiver_process.recv_many(&mut process_buffer, config.consumer_batch_size),
         )
         .await
         {
             Ok(_) => {
                 let length = process_buffer.len();
-                info!("process batch read {} / {}", length, batch_size);
+                info!(
+                    "process batch read {} / {}",
+                    length, config.consumer_batch_size
+                );
                 let start = Local::now().timestamp_millis();
 
                 let process_sql: Vec<String> = process_buffer

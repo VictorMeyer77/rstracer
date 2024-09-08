@@ -1,10 +1,12 @@
+use crate::pipeline::error::Error;
 use config::File;
 use serde::Deserialize;
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
     pub disk_file_path: String,
-    pub ps: CommandConfig,
+    pub request: ChannelConfig,
+    pub ps: ChannelConfig,
     pub persist_layer: CopyConfig,
     pub load_layer: CopyConfig,
     pub vacuum: VacuumConfig,
@@ -12,9 +14,9 @@ pub struct Config {
 }
 
 #[derive(Debug, Deserialize, Clone)]
-pub struct CommandConfig {
+pub struct ChannelConfig {
     pub channel_size: usize,
-    pub producer_frequency: u64,
+    pub producer_frequency: Option<u64>,
     pub consumer_batch_size: usize,
 }
 
@@ -69,10 +71,9 @@ impl ScheduleConfig {
     }
 }
 
-pub fn read_config() -> Config {
+pub fn read_config() -> Result<Config, Error> {
     let config = config::Config::builder()
         .add_source(File::with_name("config.toml"))
-        .build()
-        .unwrap();
-    config.try_deserialize().unwrap()
+        .build()?;
+    Ok(config.try_deserialize()?)
 }

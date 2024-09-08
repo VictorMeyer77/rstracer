@@ -13,6 +13,4 @@ pub enum Error {
     Channel(#[from] Box<SendError<String>>),
     #[error("Join error: {0}")]
     Join(#[from] JoinError),
-    #[error("Ps error: {0}")]
-    Ps(#[from] ps::ps::error::Error),
 }

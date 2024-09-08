@@ -13,7 +13,7 @@ gold = true
 
 [vacuum]
 bronze = 30
-silver = 120
+silver = 30
 gold = 0
 
 [schedule]
@@ -21,7 +21,11 @@ silver = 5
 gold = 0
 vacuum = 10
 
-[ps]
+[request]
 channel_size = 100
-producer_frequency = 1
-consumer_batch_size = 50
+consumer_batch_size = 5
+
+[ps]
+channel_size = 300
+producer_frequency = 2
+consumer_batch_size = 100
