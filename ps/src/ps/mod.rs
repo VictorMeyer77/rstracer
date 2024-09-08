@@ -89,10 +89,9 @@ pub async fn producer(
                 "sent {} processes in {} s",
                 length,
                 duration as f32 / 1000.0
-            )
+            );
+            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
         }
-
-        sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
     }
 
     info!("producer stop gracefully");
