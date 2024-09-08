@@ -3,24 +3,25 @@ use crate::pipeline::database::{copy_layer, execute_request, get_schema};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::{create_schema_request, Schema};
 use crate::pipeline::{execute_request_task, process_sink_task, schedule_request_task};
-//use ::config::{Config, File};
-use std::sync::atomic::AtomicBool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::join;
 use tokio::sync::mpsc::{channel, Receiver, Sender};
 use tokio::task::JoinHandle;
+use tracing::error;
 
 pub mod config;
 pub mod pipeline;
 
 pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
-    let config = read_config();
+    let config = read_config()?;
     execute_request(&create_schema_request(&config.disk_file_path))?;
 
     let schema = get_schema()?;
     copy_layer(&schema, "disk", "memory", config.load_layer.to_list())?;
 
-    let (sender_request, receiver_request): (Sender<String>, Receiver<String>) = channel(256); // todo
+    let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =
+        channel(config.request.channel_size);
     let (sender_process, receiver_process): (Sender<ps::ps::Process>, Receiver<ps::ps::Process>) =
         channel(config.ps.channel_size);
 
@@ -45,23 +46,28 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     copy_layer(&schema, "memory", "disk", config.persist_layer.to_list())?;
 
-    schedule_request_result??;
-    execute_request_result??;
-    process_source_result??;
-    process_sink_result??;
+    schedule_request_result?;
+    execute_request_result?;
+    process_source_result?;
+    process_sink_result?;
 
     Ok(())
 }
 
 fn start_execute_request_task(
-    _config: &config::Config,
+    config: &config::Config,
     receiver_request: Receiver<String>,
     stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<Result<(), Error>> {
-    //let config_clone = config.clone();
-    let stop_flag_clone = stop_flag.clone();
+) -> JoinHandle<()> {
+    let config_clone = config.request.clone();
+    let stop_flag_read = stop_flag.clone();
+    let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        execute_request_task(receiver_request, stop_flag_clone, 5).await // todo
+        if let Err(e) = execute_request_task(&config_clone, receiver_request, stop_flag_read).await
+        {
+            stop_flag_write.store(true, Ordering::Release);
+            error!("{}", e);
+        }
     })
 }
 
@@ -70,19 +76,24 @@ fn start_schedule_request_task(
     schema: &Schema,
     sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<Result<(), Error>> {
+) -> JoinHandle<()> {
     let config_clone = config.clone();
     let schema_clone = schema.clone();
     let sender_request_clone = sender_request.clone();
-    let stop_flag_clone = stop_flag.clone();
+    let stop_flag_read = stop_flag.clone();
+    let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        schedule_request_task(
-            config_clone,
+        if let Err(e) = schedule_request_task(
+            &config_clone,
             schema_clone,
             sender_request_clone,
-            stop_flag_clone,
+            stop_flag_read,
         )
         .await
+        {
+            stop_flag_write.store(true, Ordering::Release);
+            error!("{}", e);
+        }
     })
 }
 
@@ -90,35 +101,40 @@ fn start_process_source_task(
     config: &config::Config,
     sender_process: Sender<ps::ps::Process>,
     stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<Result<(), Error>> {
+) -> JoinHandle<()> {
     let config_clone = config.ps.clone();
-    let stop_flag_clone = stop_flag.clone();
+    let stop_flag_read = stop_flag.clone();
+    let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        ps::ps::producer(
+        if let Err(e) = ps::ps::producer(
             sender_process,
-            stop_flag_clone,
-            config_clone.producer_frequency,
+            stop_flag_read,
+            config_clone.producer_frequency.unwrap(),
         )
         .await
-        .map_err(Error::Ps)
+        {
+            stop_flag_write.store(true, Ordering::Release);
+            error!("{}", e);
+        }
     })
 }
+
 fn start_process_sink_task(
     config: &config::Config,
     receiver: Receiver<ps::ps::Process>,
     sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<Result<(), Error>> {
+) -> JoinHandle<()> {
     let config_clone = config.ps.clone();
     let sender_clone = sender_request.clone();
-    let stop_flag_clone = stop_flag.clone();
+    let stop_flag_read = stop_flag.clone();
+    let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        process_sink_task(
-            config_clone.consumer_batch_size,
-            receiver,
-            sender_clone,
-            stop_flag_clone,
-        )
-        .await
+        if let Err(e) =
+            process_sink_task(&config_clone, receiver, sender_clone, stop_flag_read).await
+        {
+            stop_flag_write.store(true, Ordering::Release);
+            error!("{}", e);
+        }
     })
 }
