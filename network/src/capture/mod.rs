@@ -51,7 +51,7 @@ impl Capture {
         Capture {
             device: device.clone(),
             packet: packet.to_vec(),
-            created_at: Local::now().timestamp_millis(),
+            created_at: Local::now().timestamp(),
             data_link: None,
             network: None,
             transport: None,
