@@ -1,5 +1,6 @@
 use crate::ps::error::Error;
 use crate::ps::unix::Unix;
+use chrono::Local;
 use std::env::consts;
 use std::process::Output;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -7,6 +8,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
+use tracing::{info, warn};
 
 pub mod error;
 pub mod unix;
@@ -61,16 +63,40 @@ pub fn ps() -> Result<Vec<Process>, Error> {
 pub async fn producer(
     sender: Sender<Process>,
     stop_flag: Arc<AtomicBool>,
-    frequency_secs: u64,
+    frequency: u64,
 ) -> Result<(), Error> {
     while !stop_flag.load(Ordering::Relaxed) {
-        for file in ps()? {
+        let start = Local::now().timestamp_millis();
+        let processes = ps()?;
+        let length = processes.len();
+
+        for file in processes {
             if let Err(e) = sender.send(file).await {
-                return Err(Error::Channel(Box::new(e)));
+                warn!("{}", e);
             }
         }
-        sleep(Duration::from_secs(frequency_secs)).await;
+
+        let duration = Local::now().timestamp_millis() - start;
+
+        if duration > (frequency * 1000) as i64 {
+            warn!(
+                "sending result is longer than the frequency. {} processes sent in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+        } else {
+            info!(
+                "sent {} processes in {} s",
+                length,
+                duration as f32 / 1000.0
+            )
+        }
+
+        sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
     }
+
+    info!("producer stop gracefully");
+
     Ok(())
 }
 
@@ -94,7 +120,7 @@ mod tests {
         });
 
         let stop_task = tokio::spawn(async move {
-            sleep(Duration::from_secs(1)).await;
+            sleep(Duration::from_secs(10)).await;
             stop_flag.store(true, Ordering::Release);
         });
 
