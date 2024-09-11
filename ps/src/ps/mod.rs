@@ -73,6 +73,7 @@ pub async fn producer(
         for file in processes {
             if let Err(e) = sender.send(file).await {
                 warn!("{}", e);
+                stop_flag.store(true, Ordering::Release);
             }
         }
 
@@ -80,7 +81,7 @@ pub async fn producer(
 
         if duration > (frequency * 1000) as i64 {
             warn!(
-                "sending result is longer than the frequency. {} processes sent in {} s",
+                "sending rows is longer than the frequency. {} processes sent in {} s",
                 length,
                 duration as f32 / 1000.0
             );
