@@ -7,6 +7,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
+use tracing::{info, warn};
 
 pub mod error;
 pub mod unix;
@@ -65,16 +66,40 @@ pub fn lsof() -> Result<Vec<OpenFile>, Error> {
 pub async fn producer(
     sender: Sender<OpenFile>,
     stop_flag: Arc<AtomicBool>,
-    frequency_secs: u64,
+    frequency: u64,
 ) -> Result<(), Error> {
     while !stop_flag.load(Ordering::Relaxed) {
-        for file in lsof()? {
+        let start = Local::now().timestamp_millis();
+        let open_files = lsof()?;
+        let length = open_files.len();
+
+        for file in open_files {
             if let Err(e) = sender.send(file).await {
-                return Err(Error::Channel(Box::new(e)));
+                warn!("{}", e);
+                stop_flag.store(true, Ordering::Release);
             }
         }
-        sleep(Duration::from_secs(frequency_secs)).await;
+
+        let duration = Local::now().timestamp_millis() - start;
+
+        if duration > (frequency * 1000) as i64 {
+            warn!(
+                "sending rows is longer than the frequency. {} open files sent in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+        } else {
+            info!(
+                "sent {} open files in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
+        }
     }
+
+    info!("producer stop gracefully");
+
     Ok(())
 }
 
