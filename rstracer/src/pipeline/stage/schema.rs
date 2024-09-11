@@ -31,6 +31,24 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_process_list (
 );
 "#;
 
+const BRONZE_OPEN_FILES: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_open_files_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_open_files (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_open_files_serial'),
+    command TEXT,
+    pid INTEGER,
+    uid INTEGER,
+    fd TEXT,
+    type TEXT,
+    device TEXT,
+    size BIGINT,
+    node TEXT,
+    name TEXT,
+    created_at TIMESTAMP,
+    inserted_at TIMESTAMP
+);
+"#;
+
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
@@ -71,8 +89,9 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {}",
+        "{} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
+        BRONZE_OPEN_FILES.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database)
     )
 }

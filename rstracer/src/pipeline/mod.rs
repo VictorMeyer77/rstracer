@@ -6,6 +6,7 @@ use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::silver::silver_request;
 use crate::pipeline::stage::vacuum::vacuum_request;
 use chrono::Local;
+use lsof::lsof::OpenFile;
 use ps::ps::Process;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -32,9 +33,11 @@ pub async fn execute_request_task(
         let mut request_buffer: Vec<String> = Vec::with_capacity(config.consumer_batch_size);
 
         info!(
-            "sql request receiver contains {} elements",
-            receiver_request.len()
+            "sql request receiver contains {} / {} elements",
+            receiver_request.len(),
+            config.channel_size
         );
+
         match timeout(
             Duration::from_millis(TIMEOUT_MS),
             receiver_request.recv_many(&mut request_buffer, config.consumer_batch_size),
@@ -91,6 +94,7 @@ pub async fn schedule_request_task(
             if Local::now().timestamp() > *executed_at + task.2 as i64 {
                 if let Err(e) = sender_request.send(task.1.clone()).await {
                     warn!("{}", e);
+                    stop_flag.store(true, Ordering::Release);
                 } else {
                     *executed_at = Local::now().timestamp();
                     info!("{} sql request sent", task.0);
@@ -135,25 +139,89 @@ pub async fn process_sink_task(
                 );
                 let start = Local::now().timestamp_millis();
 
-                let process_sql: Vec<String> = process_buffer
+                let values: Vec<String> = process_buffer
                     .iter()
-                    .map(|process| process.to_sql())
+                    .map(|process| process.to_insert_value())
                     .collect();
-                if let Err(e) = sender_request.send(process_sql.join(" ")).await {
+                let request = format!("{} {};", Process::get_insert_header(), values.join(","));
+                if let Err(e) = sender_request.send(request).await {
                     warn!("{}", e);
+                    stop_flag.store(true, Ordering::Release);
+                } else {
+                    let duration = Local::now().timestamp_millis() - start;
+                    info!(
+                        "sent {} process sql in {} s",
+                        length,
+                        duration as f32 / 1000.0
+                    );
                 }
-
-                let duration = Local::now().timestamp_millis() - start;
-                info!(
-                    "sent {} process sql in {} s",
-                    length,
-                    duration as f32 / 1000.0
-                );
             }
             Err(_) => {
                 info!("process timeout triggered")
             }
         }
+
+        sleep(Duration::from_millis(config.producer_frequency.unwrap())).await;
+    }
+
+    info!("process producer stop gracefully");
+
+    Ok(())
+}
+
+pub async fn open_file_sink_task(
+    config: &ChannelConfig,
+    receiver_open_file: Receiver<OpenFile>,
+    sender_request: Sender<String>,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let mut receiver_open_file = receiver_open_file;
+
+    while !stop_flag.load(Ordering::Relaxed) {
+        let mut open_file_buffer: Vec<OpenFile> = Vec::with_capacity(config.consumer_batch_size);
+
+        info!(
+            "open file receiver contains {} elements",
+            receiver_open_file.len()
+        );
+
+        match timeout(
+            Duration::from_millis(TIMEOUT_MS),
+            receiver_open_file.recv_many(&mut open_file_buffer, config.consumer_batch_size),
+        )
+        .await
+        {
+            Ok(_) => {
+                let length = open_file_buffer.len();
+                info!(
+                    "open file batch read {} / {}",
+                    length, config.consumer_batch_size
+                );
+                let start = Local::now().timestamp_millis();
+
+                let values: Vec<String> = open_file_buffer
+                    .iter()
+                    .map(|file| file.to_insert_value())
+                    .collect();
+                let request = format!("{} {};", OpenFile::get_insert_header(), values.join(","));
+                if let Err(e) = sender_request.send(request).await {
+                    warn!("{}", e);
+                    stop_flag.store(true, Ordering::Release);
+                } else {
+                    let duration = Local::now().timestamp_millis() - start;
+                    info!(
+                        "sent {} open file sql in {} s",
+                        length,
+                        duration as f32 / 1000.0
+                    );
+                }
+            }
+            Err(_) => {
+                info!("open file timeout triggered")
+            }
+        }
+
+        sleep(Duration::from_millis(config.task_frequency_millis.unwrap())).await;
     }
 
     info!("process producer stop gracefully");

@@ -13,19 +13,27 @@ gold = true
 
 [vacuum]
 bronze = 30
-silver = 30
+silver = 120
 gold = 0
 
 [schedule]
 silver = 5
 gold = 0
-vacuum = 10
+vacuum = 60
 
 [request]
-channel_size = 100
-consumer_batch_size = 5
+channel_size = 500
+consumer_batch_size = 20 # garder eleve pour balance
 
+# environ 500 par command
 [ps]
-channel_size = 300
+channel_size = 500
 producer_frequency = 2
+consumer_batch_size = 100 # nb de ligne "insert" par requete
+task_frequency_millis = 0 # todo
+
+[lsof]
+channel_size = 1000
+producer_frequency = 10
 consumer_batch_size = 100
+task_frequency_millis = 50 # todo

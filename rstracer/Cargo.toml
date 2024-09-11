@@ -8,6 +8,7 @@ chrono = "0.4"
 config = "0.14.0"
 duckdb = { version = "1.0.0", features = ["bundled"] }
 lazy_static = "1.5.0"
+lsof = { path = "../lsof"}
 ps = { path = "../ps"}
 serde = { version = "1.0.208", features = ["derive"] }
 thiserror = "1.0.63"

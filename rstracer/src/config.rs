@@ -7,6 +7,7 @@ pub struct Config {
     pub disk_file_path: String,
     pub request: ChannelConfig,
     pub ps: ChannelConfig,
+    pub lsof: ChannelConfig,
     pub persist_layer: CopyConfig,
     pub load_layer: CopyConfig,
     pub vacuum: VacuumConfig,
@@ -18,6 +19,7 @@ pub struct ChannelConfig {
     pub channel_size: usize,
     pub producer_frequency: Option<u64>,
     pub consumer_batch_size: usize,
+    pub task_frequency_millis: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
