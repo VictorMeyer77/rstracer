@@ -74,6 +74,7 @@ pub async fn producer(
             if let Err(e) = sender.send(file).await {
                 warn!("{}", e);
                 stop_flag.store(true, Ordering::Release);
+                break;
             }
         }
 
