@@ -27,7 +27,8 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_process_list (
     status TEXT,                                                          -- Status of the process
     command TEXT,                                                         -- Command that initiated the process
     created_at TIMESTAMP,                                                    -- Timestamp of evenement
-    inserted_at TIMESTAMP                                                    -- Timestamp of record insertion
+    inserted_at TIMESTAMP,                                                    -- Timestamp of record insertion
+    brz_ingestion_duration INTERVAL                                       -- Duration between the creation and the insertion in bronze
 );
 "#;
 
@@ -45,7 +46,8 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_open_files (
     node TEXT,
     name TEXT,
     created_at TIMESTAMP,
-    inserted_at TIMESTAMP
+    inserted_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL
 );
 "#;
 
@@ -63,9 +65,33 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_process_list (
     status TEXT,                                                          -- Status of the process
     command TEXT,                                                         -- Command that initiated the process
     created_at TIMESTAMP,                                                    -- Timestamp of evenement
+    brz_ingestion_duration INTERVAL,
     duration INTERVAL,                                                -- Duration of the process
-    ingestion_duration INTERVAL,                                       -- Duration between the command execution and the insertion in the database
-    inserted_at TIMESTAMP                                                    -- Timestamp of record insertion
+    inserted_at TIMESTAMP,                                              -- Timestamp of record insertion
+    svr_ingestion_duration INTERVAL                                     -- Duration between the insertion in bronze and insertion in silver
+);
+"#;
+
+const SILVER_OPEN_FILES: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_open_files (
+    _id INTEGER PRIMARY KEY,
+    command TEXT,
+    pid INTEGER,
+    uid INTEGER,
+    fd TEXT,
+    type TEXT,
+    device TEXT,
+    size BIGINT,
+    node TEXT,
+    name TEXT,
+    created_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL,
+    ip_source_address TEXT,
+    ip_source_port TEXT,
+    ip_destination_address TEXT,
+    ip_destination_port TEXT,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
 );
 "#;
 
@@ -89,10 +115,11 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {}",
+        "{} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
-        SILVER_PROCESS_LIST.replace("{db_name}", database)
+        SILVER_PROCESS_LIST.replace("{db_name}", database),
+        SILVER_OPEN_FILES.replace("{db_name}", database),
     )
 }
 
