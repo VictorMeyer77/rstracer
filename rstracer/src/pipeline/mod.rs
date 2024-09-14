@@ -143,7 +143,11 @@ pub async fn process_sink_task(
                     .iter()
                     .map(|process| process.to_insert_value())
                     .collect();
-                let request = format!("{} {};", Process::get_insert_header(), values.join(","));
+                let request = if length == 0 {
+                    "".to_string()
+                } else {
+                    format!("{} {};", Process::get_insert_header(), values.join(","))
+                };
                 if let Err(e) = sender_request.send(request).await {
                     warn!("{}", e);
                     stop_flag.store(true, Ordering::Release);
@@ -160,8 +164,6 @@ pub async fn process_sink_task(
                 info!("process timeout triggered")
             }
         }
-
-        sleep(Duration::from_millis(config.producer_frequency.unwrap())).await;
     }
 
     info!("process producer stop gracefully");
@@ -203,7 +205,11 @@ pub async fn open_file_sink_task(
                     .iter()
                     .map(|file| file.to_insert_value())
                     .collect();
-                let request = format!("{} {};", OpenFile::get_insert_header(), values.join(","));
+                let request = if length == 0 {
+                    "".to_string()
+                } else {
+                    format!("{} {};", OpenFile::get_insert_header(), values.join(","))
+                };
                 if let Err(e) = sender_request.send(request).await {
                     warn!("{}", e);
                     stop_flag.store(true, Ordering::Release);
@@ -220,8 +226,6 @@ pub async fn open_file_sink_task(
                 info!("open file timeout triggered")
             }
         }
-
-        sleep(Duration::from_millis(config.task_frequency_millis.unwrap())).await;
     }
 
     info!("process producer stop gracefully");

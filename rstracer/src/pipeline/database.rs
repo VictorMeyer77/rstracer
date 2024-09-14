@@ -68,7 +68,7 @@ pub fn copy_layer(
 ) -> Result<(), Error> {
     for layer in layers {
         if layer.1 {
-            info!("copy layer {} from {source} to {target}", layer.0);
+            info!("copy layer {} from {source} to {target}...", layer.0);
             execute_request(&copy_layer_request(schema, source, target, &layer.0, true)?)?
         }
     }
