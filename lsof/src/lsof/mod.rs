@@ -2,7 +2,6 @@ use crate::lsof::error::Error;
 use crate::lsof::unix::Unix;
 use chrono::Local;
 use std::env::consts;
-use std::process::Output;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
@@ -44,12 +43,7 @@ impl OpenFile {
 }
 
 pub trait Lsof {
-    fn os_command() -> Result<Output, Error>;
-    fn parse_output(output: &str) -> Result<Vec<OpenFile>, Error>;
-    fn exec() -> Result<Vec<OpenFile>, Error> {
-        let output = Self::os_command()?;
-        Self::parse_output(&String::from_utf8_lossy(&output.stdout))
-    }
+    fn exec() -> Result<Vec<OpenFile>, Error>;
 }
 
 pub fn lsof() -> Result<Vec<OpenFile>, Error> {

@@ -5,9 +5,26 @@ use std::process::{Command, Output};
 pub struct Unix;
 
 impl Lsof for Unix {
-    fn os_command() -> Result<Output, Error> {
+    fn exec() -> Result<Vec<OpenFile>, Error> {
+        let mut open_files =
+            Self::parse_output(&String::from_utf8_lossy(&Self::lsof_network()?.stdout))?;
+        open_files.extend(Self::parse_output(&String::from_utf8_lossy(
+            &Self::lsof_mount_file()?.stdout,
+        ))?);
+        Ok(open_files)
+    }
+}
+
+impl Unix {
+    fn lsof_network() -> Result<Output, Error> {
         Ok(Command::new("lsof")
-            .args(["-b", "-F", "pcuftDsin"])
+            .args(["-F", "pcuftDsin", "-i"])
+            .output()?)
+    }
+
+    fn lsof_mount_file() -> Result<Output, Error> {
+        Ok(Command::new("lsof")
+            .args(["-F", "pcuftDsin", "/"])
             .output()?)
     }
 
