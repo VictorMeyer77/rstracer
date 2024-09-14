@@ -1,6 +1,9 @@
 use crate::pipeline::error::Error;
-use config::File;
+use config;
 use serde::Deserialize;
+use std::path::Path;
+
+const CONFIG_FILE_PATH: &str = "rstracer.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
@@ -19,7 +22,6 @@ pub struct ChannelConfig {
     pub channel_size: usize,
     pub producer_frequency: Option<u64>,
     pub consumer_batch_size: usize,
-    pub task_frequency_millis: Option<u64>,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -74,8 +76,42 @@ impl ScheduleConfig {
 }
 
 pub fn read_config() -> Result<Config, Error> {
-    let config = config::Config::builder()
-        .add_source(File::with_name("config.toml"))
-        .build()?;
+    let mut config = config::Config::builder()
+        .set_default("disk_file_path", "/tmp/rstracer.db")?
+        // persist_layer
+        .set_default("persist_layer.bronze", true)?
+        .set_default("persist_layer.silver", true)?
+        .set_default("persist_layer.gold", true)?
+        // load_layer
+        .set_default("load_layer.bronze", false)?
+        .set_default("load_layer.silver", false)?
+        .set_default("load_layer.gold", true)?
+        // vacuum
+        .set_default("vacuum.bronze", 30)?
+        .set_default("vacuum.silver", 30)?
+        .set_default("vacuum.gold", 0)?
+        // schedule
+        .set_default("schedule.silver", 2)?
+        .set_default("schedule.gold", 0)?
+        .set_default("schedule.vacuum", 30)?
+        // request
+        .set_default("request.channel_size", 100)?
+        .set_default("request.consumer_batch_size", 10)?
+        // ps
+        .set_default("ps.channel_size", 500)?
+        .set_default("ps.producer_frequency", 1)?
+        .set_default("ps.consumer_batch_size", 50)?
+        // lsof
+        .set_default("lsof.channel_size", 1000)?
+        .set_default("lsof.producer_frequency", 10)?
+        .set_default("lsof.consumer_batch_size", 150)?;
+
+    let config_file = Path::new(CONFIG_FILE_PATH);
+    if config_file.exists() {
+        config = config.add_source(config::File::with_name(CONFIG_FILE_PATH));
+    }
+
+    let config = config.build()?;
+
     Ok(config.try_deserialize()?)
 }
