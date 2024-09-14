@@ -25,8 +25,7 @@ pub fn copy_layer_request(
     layer: &str,
     overwrite: bool,
 ) -> Result<String, Error> {
-    let mut query: String = "BEGIN;".to_string();
-
+    let mut query: String = String::new();
     for table in &schema.tables {
         let columns: Vec<String> = table
             .columns
@@ -45,6 +44,5 @@ pub fn copy_layer_request(
             ))
         }
     }
-    query.push_str("COMMIT;");
     Ok(query)
 }
