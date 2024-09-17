@@ -34,3 +34,7 @@ consumer_batch_size = 50
 channel_size = 1000
 producer_frequency = 10
 consumer_batch_size = 150
+
+[network]
+channel_size = 100
+consumer_batch_size = 5

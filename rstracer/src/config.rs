@@ -11,6 +11,7 @@ pub struct Config {
     pub request: ChannelConfig,
     pub ps: ChannelConfig,
     pub lsof: ChannelConfig,
+    pub network: ChannelConfig,
     pub persist_layer: CopyConfig,
     pub load_layer: CopyConfig,
     pub vacuum: VacuumConfig,
@@ -104,7 +105,10 @@ pub fn read_config() -> Result<Config, Error> {
         // lsof
         .set_default("lsof.channel_size", 1000)?
         .set_default("lsof.producer_frequency", 10)?
-        .set_default("lsof.consumer_batch_size", 150)?;
+        .set_default("lsof.consumer_batch_size", 150)?
+        // network
+        .set_default("network.channel_size", 100)?
+        .set_default("network.consumer_batch_size", 5)?;
 
     let config_file = Path::new(CONFIG_FILE_PATH);
     if config_file.exists() {
