@@ -51,6 +51,17 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_open_files (
 );
 "#;
 
+const BRONZE_NETWORK_PACKET: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_packet (
+    _id HUGEINT PRIMARY KEY,
+    interface TEXT,
+    length INTEGER,
+    created_at TIMESTAMP,
+    inserted_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL
+);
+"#;
+
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
@@ -115,9 +126,10 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {}",
+        "{} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
+        BRONZE_NETWORK_PACKET.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
     )

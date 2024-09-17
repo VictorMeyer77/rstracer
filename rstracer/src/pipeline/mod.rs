@@ -1,12 +1,13 @@
 use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
-use crate::pipeline::stage::bronze::Bronze;
+use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::silver::silver_request;
 use crate::pipeline::stage::vacuum::vacuum_request;
 use chrono::Local;
 use lsof::lsof::OpenFile;
+use network::capture::Capture;
 use ps::ps::Process;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -229,6 +230,65 @@ pub async fn open_file_sink_task(
     }
 
     info!("process producer stop gracefully");
+
+    Ok(())
+}
+
+pub async fn network_capture_sink_task(
+    config: &ChannelConfig,
+    receiver_capture: Receiver<Capture>,
+    sender_request: Sender<String>,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let mut receiver_capture = receiver_capture;
+
+    while !stop_flag.load(Ordering::Relaxed) {
+        let mut capture_buffer: Vec<Capture> = Vec::with_capacity(config.consumer_batch_size);
+
+        info!(
+            "network capture receiver contains {} elements",
+            receiver_capture.len()
+        );
+
+        match timeout(
+            Duration::from_millis(TIMEOUT_MS),
+            receiver_capture.recv_many(&mut capture_buffer, config.consumer_batch_size),
+        )
+        .await
+        {
+            Ok(_) => {
+                let length = capture_buffer.len();
+                info!(
+                    "network capture batch read {} / {}",
+                    length, config.consumer_batch_size
+                );
+                let start = Local::now().timestamp_millis();
+
+                let values: Vec<String> = capture_buffer.iter().map(|file| file.to_sql()).collect();
+
+                let request = if length == 0 {
+                    "".to_string()
+                } else {
+                    values.join(" ")
+                };
+
+                if let Err(e) = sender_request.send(request).await {
+                    warn!("{}", e);
+                    stop_flag.store(true, Ordering::Release);
+                } else {
+                    let duration = Local::now().timestamp_millis() - start;
+                    info!(
+                        "sent {} network capture sql in {} s",
+                        length,
+                        duration as f32 / 1000.0
+                    );
+                }
+            }
+            Err(_) => {
+                info!("network capture timeout triggered")
+            }
+        }
+    }
 
     Ok(())
 }
