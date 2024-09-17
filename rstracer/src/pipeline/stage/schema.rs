@@ -53,12 +53,25 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_open_files (
 
 const BRONZE_NETWORK_PACKET: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_packet (
-    _id HUGEINT PRIMARY KEY,
+    _id UHUGEINT PRIMARY KEY,
     interface TEXT,
     length INTEGER,
     created_at TIMESTAMP,
     inserted_at TIMESTAMP,
     brz_ingestion_duration INTERVAL
+);
+"#;
+
+const BRONZE_NETWORK_ETHERNET: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_ethernet_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_ethernet (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_ethernet_serial'),
+    packet_id UHUGEINT,
+    source TEXT,
+    destination TEXT,
+    ether_type USMALLINT,
+    payload_length UINTEGER,
+    inserted_at TIMESTAMP,
 );
 "#;
 
@@ -126,10 +139,11 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {}",
+        "{} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
+        BRONZE_NETWORK_ETHERNET.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
     )

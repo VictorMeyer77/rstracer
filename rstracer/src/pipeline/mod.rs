@@ -264,7 +264,10 @@ pub async fn network_capture_sink_task(
                 );
                 let start = Local::now().timestamp_millis();
 
-                let values: Vec<String> = capture_buffer.iter().map(|file| file.to_sql()).collect();
+                let values: Vec<String> = capture_buffer
+                    .iter()
+                    .map(|file| file.to_insert_sql(None))
+                    .collect();
 
                 let request = if length == 0 {
                     "".to_string()

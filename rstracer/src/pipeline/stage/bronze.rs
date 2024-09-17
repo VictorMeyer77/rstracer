@@ -1,10 +1,11 @@
 use lsof::lsof::OpenFile;
+use network::capture::data_link::{DataLink, DataLinkProtocol};
 use network::capture::Capture;
 use ps::ps::Process;
 use uuid::Uuid;
 
 pub trait Bronze {
-    fn to_sql(&self) -> String;
+    fn to_insert_sql(&self, foreign_id: Option<u128>) -> String;
 }
 
 pub trait BronzeBatch {
@@ -62,8 +63,8 @@ impl BronzeBatch for OpenFile {
 }
 
 impl Bronze for Capture {
-    fn to_sql(&self) -> String {
-        let row_id = Uuid::new_v4().as_u64_pair().0;
+    fn to_insert_sql(&self, _foreign_id: Option<u128>) -> String {
+        let row_id = Uuid::new_v4().as_u128();
         let mut request_buffer = "BEGIN; ".to_string();
         request_buffer.push_str(&format!(
             r#"INSERT OR REPLACE INTO memory.bronze_network_packet
@@ -74,7 +75,32 @@ impl Bronze for Capture {
             self.packet.len(),
             self.created_at
         ));
+
+        if self.data_link.is_some() {
+            request_buffer.push_str(&self.data_link.clone().unwrap().to_insert_sql(Some(row_id)))
+        }
+
         request_buffer.push_str("COMMIT;");
         request_buffer
+    }
+}
+
+impl Bronze for DataLink {
+    fn to_insert_sql(&self, foreign_id: Option<u128>) -> String {
+        match self.protocol {
+            DataLinkProtocol::Ethernet => {
+                let ethernet = self.ethernet.clone().unwrap();
+                format!(
+                    r#"INSERT INTO memory.bronze_network_ethernet
+        (packet_id, source, destination, ether_type, payload_length, inserted_at) VALUES
+        ({}, '{}', '{}', {}, {}, CURRENT_TIMESTAMP);"#,
+                    foreign_id.unwrap(),
+                    ethernet.source,
+                    ethernet.destination,
+                    ethernet.ethertype.0,
+                    ethernet.payload.len()
+                )
+            }
+        }
     }
 }
