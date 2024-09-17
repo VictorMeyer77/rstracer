@@ -1,8 +1,7 @@
-use crate::capture::Capture;
 use std::io;
 use thiserror::Error;
-use tokio::sync::mpsc::error::SendError;
-use tracing::{debug, error};
+use tokio::task::JoinError;
+use tracing::error;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -14,30 +13,6 @@ pub enum Error {
     IO(#[from] io::Error),
     #[error("Pcap error: {0}")]
     Pcap(#[from] pcap::Error),
-    #[error("Channel error: {0}")]
-    Channel(#[from] Box<SendError<Capture>>),
-}
-
-pub fn handle_error(err: Error) {
-    match err {
-        Error::UnimplementedError { .. } => debug!("{}", err),
-        Error::IO(_) => {
-            error!("{}", err);
-            panic!("{}", err)
-        }
-        Error::Channel(_) => {
-            error!("{}", err);
-            panic!("{}", err)
-        }
-        Error::Pcap(err) => match err {
-            pcap::Error::TimeoutExpired => {
-                debug!("{}", err);
-            }
-            _ => {
-                error!("{}", err);
-                panic!("{}", err)
-            }
-        },
-        Error::PacketParsing => {}
-    }
+    #[error("Join error: {0}")]
+    Join(#[from] JoinError),
 }

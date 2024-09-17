@@ -1,5 +1,5 @@
 use crate::capture::Capture;
-use crate::error::{handle_error, Error};
+use crate::error::Error;
 use futures::future::join_all;
 use pcap::Device;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
-use tracing::info;
+use tracing::{debug, error, info};
 
 pub mod capture;
 pub mod error;
@@ -31,14 +31,28 @@ pub async fn read_device(
             Ok(packet) => match Capture::parse(packet.data, &device) {
                 Ok(capture) => {
                     if let Err(e) = sender.send(capture).await {
-                        handle_error(Error::Channel(Box::new(e)));
+                        error!("{}: {}", &device_name, e);
+                        break;
                     }
                 }
-                Err(e) => handle_error(e),
+                Err(e) => match e {
+                    Error::UnimplementedError { .. } => debug!("{}: {}", &device_name, e),
+                    Error::PacketParsing => debug!("{}: {}", &device_name, e),
+                    _ => {
+                        error!("{}: {}", &device_name, e);
+                        break;
+                    }
+                },
             },
-            Err(e) => handle_error(Error::Pcap(e)),
+            Err(e) => match e {
+                pcap::Error::TimeoutExpired => debug!("{}: {}", &device_name, e),
+                _ => {
+                    error!("{}: {}", &device_name, e);
+                    break;
+                }
+            },
         }
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(10)).await;
     }
     info!("producer on device {} stop gracefully", device_name);
     Ok(())
@@ -50,6 +64,8 @@ pub async fn producer(sender: Sender<Capture>, stop_flag: &Arc<AtomicBool>) -> R
         .filter(|device| device.flags.is_up() && device.flags.is_running())
         .collect();
 
+    info!("network producer scan {} devices", devices.len());
+
     let tasks: Vec<_> = devices
         .into_iter()
         .map(|device| {
@@ -58,7 +74,13 @@ pub async fn producer(sender: Sender<Capture>, stop_flag: &Arc<AtomicBool>) -> R
             tokio::spawn(async move { read_device(device, sender, stop_flag).await })
         })
         .collect();
-    join_all(tasks).await;
+    let results = join_all(tasks).await;
+    for result in results {
+        result??
+    }
+
+    info!("all interface producer stop gracefully");
+
     Ok(())
 }
 
