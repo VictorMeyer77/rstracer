@@ -6,6 +6,7 @@ use crate::error::Error;
 use chrono::Local;
 use pcap::Device;
 use std::fmt;
+use tracing::debug;
 
 pub mod application;
 pub mod data_link;
@@ -69,22 +70,31 @@ impl Capture {
                             Ok(transport) => {
                                 match application::read_packet(&transport) {
                                     Ok(application) => capture.application = Some(application),
-                                    Err(error) => return Err(error),
+                                    Err(error) => handle_error(error)?,
                                 }
                                 capture.transport = Some(transport)
                             }
-                            Err(error) => return Err(error),
+                            Err(error) => handle_error(error)?,
                         }
                         capture.network = Some(network)
                     }
-                    Err(error) => return Err(error),
+                    Err(error) => handle_error(error)?,
                 }
                 capture.data_link = Some(data_link);
             }
-            Err(error) => return Err(error),
+            Err(error) => handle_error(error)?,
         }
-
         Ok(capture)
+    }
+}
+
+fn handle_error(error: Error) -> Result<(), Error> {
+    match error {
+        Error::UnimplementedError { .. } | Error::PacketParsing => {
+            debug!("{}", error);
+            Ok(())
+        }
+        _ => Err(error),
     }
 }
 

@@ -7,7 +7,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::time::sleep;
-use tracing::{debug, error, info};
+use tracing::{error, info};
 
 pub mod capture;
 pub mod error;
@@ -35,17 +35,13 @@ pub async fn read_device(
                         break;
                     }
                 }
-                Err(e) => match e {
-                    Error::UnimplementedError { .. } => debug!("{}: {}", &device_name, e),
-                    Error::PacketParsing => debug!("{}: {}", &device_name, e),
-                    _ => {
-                        error!("{}: {}", &device_name, e);
-                        break;
-                    }
-                },
+                Err(e) => {
+                    error!("{}: {}", &device_name, e);
+                    break;
+                }
             },
             Err(e) => match e {
-                pcap::Error::TimeoutExpired => debug!("{}: {}", &device_name, e),
+                pcap::Error::TimeoutExpired => {}
                 _ => {
                     error!("{}: {}", &device_name, e);
                     break;
