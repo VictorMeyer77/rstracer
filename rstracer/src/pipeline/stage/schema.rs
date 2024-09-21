@@ -75,6 +75,63 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_ethernet (
 );
 "#;
 
+const BRONZE_NETWORK_IPV4: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_ipv4_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_ipv4 (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_ipv4_serial'),
+    packet_id UHUGEINT,
+    version USMALLINT,
+    header_length USMALLINT,
+    dscp USMALLINT,
+    ecn USMALLINT,
+    total_length USMALLINT,
+    identification USMALLINT,
+    flags USMALLINT,
+    fragment_offset USMALLINT,
+    ttl USMALLINT,
+    next_level_protocol USMALLINT,
+    checksum USMALLINT,
+    source TEXT,
+    destination TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_IPV6: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_ipv6_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_ipv6 (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_ipv6_serial'),
+    packet_id UHUGEINT,
+    version USMALLINT,
+    traffic_class USMALLINT,
+    flow_label UINTEGER,
+    payload_length USMALLINT,
+    next_header USMALLINT,
+    hop_limit USMALLINT,
+    source TEXT,
+    destination TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_ARP: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_arp_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_arp (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_arp_serial'),
+    packet_id UHUGEINT,
+    hardware_type USMALLINT,
+    protocol_type USMALLINT,
+    hw_addr_len USMALLINT,
+    proto_addr_len USMALLINT,
+    operation USMALLINT,
+    sender_hw_addr TEXT,
+    sender_proto_addr TEXT,
+    target_hw_addr TEXT,
+    target_proto_addr TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
@@ -139,11 +196,14 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
         BRONZE_NETWORK_ETHERNET.replace("{db_name}", database),
+        BRONZE_NETWORK_IPV4.replace("{db_name}", database),
+        BRONZE_NETWORK_IPV6.replace("{db_name}", database),
+        BRONZE_NETWORK_ARP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
     )

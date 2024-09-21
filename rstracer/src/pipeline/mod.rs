@@ -272,7 +272,7 @@ pub async fn network_capture_sink_task(
                 let request = if length == 0 {
                     "".to_string()
                 } else {
-                    values.join(" ")
+                    format!("BEGIN; {}; COMMIT; ", values.join(""))
                 };
 
                 if let Err(e) = sender_request.send(request).await {
@@ -291,6 +291,8 @@ pub async fn network_capture_sink_task(
                 info!("network capture timeout triggered")
             }
         }
+
+        sleep(Duration::from_millis(1000)).await;
     }
 
     Ok(())
