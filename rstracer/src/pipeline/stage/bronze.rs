@@ -1,6 +1,7 @@
 use lsof::lsof::OpenFile;
 use network::capture::data_link::{DataLink, DataLinkProtocol};
 use network::capture::network::{Network, NetworkProtocol};
+use network::capture::transport::{Transport, TransportProtocol};
 use network::capture::Capture;
 use ps::ps::Process;
 use uuid::Uuid;
@@ -67,9 +68,14 @@ impl Bronze for Capture {
     fn to_insert_sql(&self, _foreign_id: Option<u128>) -> String {
         let row_id = Uuid::new_v4().as_u128();
         let mut request_buffer = format!(
-            r#"INSERT OR REPLACE INTO memory.bronze_network_packet
-        (_id, interface, length, created_at, inserted_at, brz_ingestion_duration) VALUES
-        ({}, '{}', {}, TO_TIMESTAMP({3}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({3})::TIMESTAMP));"#,
+            r#"INSERT OR REPLACE INTO memory.bronze_network_packet (
+            _id,
+            interface,
+            length,
+            created_at,
+            inserted_at,
+            brz_ingestion_duration
+            ) VALUES ({}, '{}', {}, TO_TIMESTAMP({3}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({3})::TIMESTAMP));"#,
             row_id,
             self.device.name,
             self.packet.len(),
@@ -86,6 +92,10 @@ impl Bronze for Capture {
             request_buffer.push_str(&clone.network.unwrap().to_insert_sql(Some(row_id)))
         }
 
+        if clone.transport.is_some() {
+            request_buffer.push_str(&clone.transport.unwrap().to_insert_sql(Some(row_id)))
+        }
+
         request_buffer
     }
 }
@@ -96,9 +106,13 @@ impl Bronze for DataLink {
             DataLinkProtocol::Ethernet => {
                 let ethernet = self.ethernet.clone().unwrap();
                 format!(
-                    r#"INSERT INTO memory.bronze_network_ethernet
-        (packet_id, source, destination, ether_type, payload_length, inserted_at) VALUES
-        ({}, '{}', '{}', {}, {}, CURRENT_TIMESTAMP);"#,
+                    r#"INSERT INTO memory.bronze_network_ethernet(
+                    packet_id,
+                    source,
+                    destination,
+                    ether_type,
+                    payload_length,
+                    ) VALUES ({}, '{}', '{}', {}, {}, CURRENT_TIMESTAMP);"#,
                     foreign_id.unwrap(),
                     ethernet.source,
                     ethernet.destination,
@@ -117,9 +131,18 @@ impl Bronze for Network {
                 let arp = self.arp.clone().unwrap();
                 format!(
                     r#"INSERT INTO memory.bronze_network_arp (
-    packet_id, hardware_type, protocol_type, hw_addr_len, proto_addr_len, operation, sender_hw_addr,
-    sender_proto_addr, target_hw_addr, target_proto_addr, inserted_at
-) VALUES ({}, {}, {}, {}, {}, {}, '{}', '{}', '{}', '{}', CURRENT_TIMESTAMP);"#,
+                    packet_id,
+                    hardware_type,
+                    protocol_type,
+                    hw_addr_len,
+                    proto_addr_len,
+                    operation,
+                    sender_hw_addr,
+                    sender_proto_addr,
+                    target_hw_addr,
+                    target_proto_addr,
+                    inserted_at,
+                    ) VALUES ({}, {}, {}, {}, {}, {}, '{}', '{}', '{}', '{}', CURRENT_TIMESTAMP);"#,
                     foreign_id.unwrap(),
                     arp.hardware_type.0,
                     arp.protocol_type.0,
@@ -136,10 +159,22 @@ impl Bronze for Network {
                 let ipv4 = self.ipv4.clone().unwrap();
                 format!(
                     r#"INSERT INTO memory.bronze_network_ipv4 (
-    packet_id, version, header_length, dscp, ecn, total_length,
-    identification, flags, fragment_offset, ttl, next_level_protocol,
-    checksum, source, destination, inserted_at
-) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}', '{}', CURRENT_TIMESTAMP);"#,
+                    packet_id,
+                    version,
+                    header_length,
+                    dscp,
+                    ecn,
+                    total_length,
+                    identification,
+                    flags,
+                    fragment_offset,
+                    ttl,
+                    next_level_protocol,
+                    checksum,
+                    source,
+                    destination,
+                    inserted_at,
+                    ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{}', '{}', CURRENT_TIMESTAMP);"#,
                     foreign_id.unwrap(),
                     ipv4.version,
                     ipv4.header_length,
@@ -160,9 +195,17 @@ impl Bronze for Network {
                 let ipv6 = self.ipv6.clone().unwrap();
                 format!(
                     r#"INSERT INTO memory.bronze_network_ipv6 (
-    packet_id, version, traffic_class, flow_label, payload_length, next_header,
-    hop_limit, source, destination, inserted_at
-) VALUES ({}, {}, {}, {}, {}, {}, {}, '{}', '{}', CURRENT_TIMESTAMP);"#,
+                    packet_id,
+                    version,
+                    traffic_class,
+                    flow_label,
+                    payload_length,
+                    next_header,
+                    hop_limit,
+                    source,
+                    destination,
+                    inserted_at,
+                    ) VALUES ({}, {}, {}, {}, {}, {}, {}, '{}', '{}', CURRENT_TIMESTAMP);"#,
                     foreign_id.unwrap(),
                     ipv6.version,
                     ipv6.traffic_class,
@@ -172,6 +215,101 @@ impl Bronze for Network {
                     ipv6.hop_limit,
                     ipv6.source,
                     ipv6.destination
+                )
+            }
+        }
+    }
+}
+
+impl Bronze for Transport {
+    fn to_insert_sql(&self, foreign_id: Option<u128>) -> String {
+        match self.protocol {
+            TransportProtocol::Tcp => {
+                let tcp = self.tcp.clone().unwrap();
+                format!(
+                    r#"INSERT INTO memory.bronze_network_tcp (
+                    packet_id,
+                    source,
+                    destination,
+                    sequence,
+                    acknowledgement,
+                    data_offset,
+                    reserved,
+                    flags,
+                    _window,
+                    checksum,
+                    urgent_ptr,
+                    options,
+                    inserted_at,
+                    ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, '{:?}', CURRENT_TIMESTAMP);"#,
+                    foreign_id.unwrap(),
+                    tcp.source,
+                    tcp.destination,
+                    tcp.sequence,
+                    tcp.acknowledgement,
+                    tcp.data_offset,
+                    tcp.reserved,
+                    tcp.flags,
+                    tcp.window,
+                    tcp.checksum,
+                    tcp.urgent_ptr,
+                    tcp.options
+                )
+            }
+            TransportProtocol::Udp => {
+                let udp = self.udp.clone().unwrap();
+                format!(
+                    r#"INSERT INTO memory.bronze_network_udp (
+                    packet_id,
+                    source,
+                    destination,
+                    length,
+                    checksum,
+                    inserted_at,
+                    ) VALUES ({}, {}, {}, {}, {}, CURRENT_TIMESTAMP);"#,
+                    foreign_id.unwrap(),
+                    udp.source,
+                    udp.destination,
+                    udp.length,
+                    udp.checksum
+                )
+            }
+            TransportProtocol::Icmpv4 => {
+                let icmpv4 = self.icmpv4.clone().unwrap();
+                format!(
+                    r#"INSERT INTO memory.bronze_network_icmp (
+                    packet_id,
+                    version,
+                    type,
+                    code,
+                    checksum,
+                    payload_length,
+                    inserted_at,
+                    ) VALUES ({}, 4, {}, {}, {}, '{}', CURRENT_TIMESTAMP);"#,
+                    foreign_id.unwrap(),
+                    icmpv4.icmp_type.0,
+                    icmpv4.icmp_code.0,
+                    icmpv4.checksum,
+                    icmpv4.payload.len(),
+                )
+            }
+            TransportProtocol::Icmpv6 => {
+                let icmpv6 = self.icmpv6.clone().unwrap();
+                format!(
+                    r#"INSERT INTO memory.bronze_network_icmp (
+                    packet_id,
+                    version,
+                    type,
+                    code,
+                    checksum,
+                    payload_length,
+                    inserted_at,
+                    ) VALUES ({}, 6, {}, {}, {}, {}, CURRENT_TIMESTAMP);"#,
+                    foreign_id.unwrap(),
+                    icmpv6.icmpv6_type.0,
+                    icmpv6.icmpv6_code.0,
+                    icmpv6.checksum,
+                    icmpv6.payload.len(),
                 )
             }
         }

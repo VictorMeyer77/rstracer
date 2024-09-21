@@ -132,6 +132,53 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_arp (
 );
 "#;
 
+const BRONZE_NETWORK_TCP: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_tcp_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_tcp (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_tcp_serial'),
+    packet_id UHUGEINT,
+    source USMALLINT,
+    destination USMALLINT,
+    sequence UINTEGER,
+    acknowledgement UINTEGER,
+    data_offset USMALLINT,
+    reserved USMALLINT,
+    flags USMALLINT,
+    _window USMALLINT,
+    checksum USMALLINT,
+    urgent_ptr USMALLINT,
+    options TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_UDP: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_udp_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_udp (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_udp_serial'),
+    packet_id UHUGEINT,
+    source USMALLINT,
+    destination USMALLINT,
+    length USMALLINT,
+    checksum USMALLINT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_ICMP: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_icmp_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_icmp (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_icmp_serial'),
+    packet_id UHUGEINT,
+    version USMALLINT,
+    type USMALLINT,
+    code USMALLINT,
+    checksum USMALLINT,
+    payload_length UINTEGER,
+    inserted_at TIMESTAMP,
+);
+"#;
+
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
@@ -196,7 +243,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -204,6 +251,9 @@ fn create_tables_request(database: &str) -> String {
         BRONZE_NETWORK_IPV4.replace("{db_name}", database),
         BRONZE_NETWORK_IPV6.replace("{db_name}", database),
         BRONZE_NETWORK_ARP.replace("{db_name}", database),
+        BRONZE_NETWORK_TCP.replace("{db_name}", database),
+        BRONZE_NETWORK_UDP.replace("{db_name}", database),
+        BRONZE_NETWORK_ICMP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
     )
