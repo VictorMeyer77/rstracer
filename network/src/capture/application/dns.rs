@@ -294,9 +294,9 @@ pub mod tests {
     }
 
     #[test]
-    fn test_dns_flags_from_u16() {
+    fn test_dns_flags_try_from() {
         let flags = 0x8180;
-        let dns_flags = DnsHeaderFlags::from_u16(flags);
+        let dns_flags = DnsHeaderFlags::try_from(flags).unwrap();
 
         assert!(dns_flags.qr);
         assert_eq!(dns_flags.opcode, 0);
@@ -311,7 +311,7 @@ pub mod tests {
     #[test]
     fn test_dns_flags_edge_cases() {
         let flags = 0xFFFF;
-        let dns_flags = DnsHeaderFlags::from_u16(flags);
+        let dns_flags = DnsHeaderFlags::try_from(flags).unwrap();
 
         assert!(dns_flags.qr);
         assert_eq!(dns_flags.opcode, 15);
@@ -326,7 +326,7 @@ pub mod tests {
     #[test]
     fn test_dns_flags_zero() {
         let flags = 0x0000;
-        let dns_flags = DnsHeaderFlags::from_u16(flags);
+        let dns_flags = DnsHeaderFlags::try_from(flags).unwrap();
 
         assert!(!dns_flags.qr);
         assert_eq!(dns_flags.opcode, 0);
