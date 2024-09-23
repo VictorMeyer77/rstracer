@@ -179,6 +179,85 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_icmp (
 );
 "#;
 
+const BRONZE_NETWORK_TLS: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_tls_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_tls (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_tls_serial'),
+    packet_id UHUGEINT,
+    content_type USMALLINT,
+    version USMALLINT,
+    length USMALLINT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_DNS_HEADER: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_header_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_header (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_header_serial'),
+    packet_id UHUGEINT,
+    id USMALLINT,
+    qr BOOL,
+    opcode USMALLINT,
+    aa BOOL,
+    tc BOOL,
+    rd BOOL,
+    ra BOOL,
+    z USMALLINT,
+    rcode USMALLINT,
+    qd_count USMALLINT,
+    an_count USMALLINT,
+    ns_count USMALLINT,
+    ar_count USMALLINT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_DNS_QUESTION: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_question_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_question (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_question_serial'),
+    packet_id UHUGEINT,
+    qname TEXT,
+    qtype USMALLINT,
+    qclass USMALLINT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_DNS_RECORD: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_record_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_record (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_record_serial'),
+    packet_id UHUGEINT,
+    additional BOOL,
+    name TEXT,
+    rr_type USMALLINT,
+    rr_class USMALLINT,
+    ttl UINTEGER,
+    rdlength USMALLINT,
+    rdata UTINYINT[],
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const BRONZE_NETWORK_HTTP: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_http_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_http (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_http_serial'),
+    packet_id UHUGEINT,
+    type TEXT,
+    method TEXT,
+    uri TEXT,
+    version TEXT,
+    status_code USMALLINT,
+    status_text TEXT,
+    headers TEXT,
+    body TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
@@ -243,7 +322,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -254,6 +333,11 @@ fn create_tables_request(database: &str) -> String {
         BRONZE_NETWORK_TCP.replace("{db_name}", database),
         BRONZE_NETWORK_UDP.replace("{db_name}", database),
         BRONZE_NETWORK_ICMP.replace("{db_name}", database),
+        BRONZE_NETWORK_TLS.replace("{db_name}", database),
+        BRONZE_NETWORK_DNS_HEADER.replace("{db_name}", database),
+        BRONZE_NETWORK_DNS_QUESTION.replace("{db_name}", database),
+        BRONZE_NETWORK_DNS_RECORD.replace("{db_name}", database),
+        BRONZE_NETWORK_HTTP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
     )
