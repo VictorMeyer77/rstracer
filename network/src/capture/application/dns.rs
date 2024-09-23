@@ -107,21 +107,19 @@ impl DnsHeader {
         ))
     }
 
-    pub fn get_flags(&self) -> DnsHeaderFlags {
-        DnsHeaderFlags::from_u16(self.flags)
-    }
-
     pub fn valid_header(&self) -> bool {
-        let flags = self.get_flags();
+        let flags = DnsHeaderFlags::try_from(self.flags).unwrap();
         (self.qd_count > 0 || self.ar_count > 0)
             && (self.qd_count < 2)
             && (flags.opcode < 16 && flags.rcode < 16 && flags.z == 0)
     }
 }
 
-impl DnsHeaderFlags {
-    fn from_u16(flags: u16) -> Self {
-        DnsHeaderFlags {
+impl TryFrom<u16> for DnsHeaderFlags {
+    type Error = ();
+
+    fn try_from(flags: u16) -> Result<Self, Self::Error> {
+        Ok(DnsHeaderFlags {
             qr: (flags & 0x8000) != 0,
             opcode: ((flags & 0x7800) >> 11) as u8,
             aa: (flags & 0x0400) != 0,
@@ -130,7 +128,7 @@ impl DnsHeaderFlags {
             ra: (flags & 0x0080) != 0,
             z: ((flags & 0x0070) >> 4) as u8,
             rcode: (flags & 0x000F) as u8,
-        }
+        })
     }
 }
 
