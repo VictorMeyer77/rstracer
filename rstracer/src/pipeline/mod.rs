@@ -70,10 +70,9 @@ pub async fn execute_request_task(
     Ok(())
 }
 
-pub async fn schedule_request_task(
+pub async fn execute_schedule_request_task(
     config: &Config,
     schema: Schema,
-    sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
     let mut tasks: HashMap<(&str, String, u64), i64> = HashMap::new();
@@ -93,13 +92,15 @@ pub async fn schedule_request_task(
     while !stop_flag.load(Ordering::Relaxed) {
         for (task, executed_at) in tasks.iter_mut() {
             if Local::now().timestamp() > *executed_at + task.2 as i64 {
-                if let Err(e) = sender_request.send(task.1.clone()).await {
-                    warn!("{}", e);
-                    stop_flag.store(true, Ordering::Release);
-                } else {
-                    *executed_at = Local::now().timestamp();
-                    info!("{} sql request sent", task.0);
-                }
+                let start = Local::now().timestamp_millis();
+                execute_request(&task.1)?;
+                let duration = Local::now().timestamp_millis() - start;
+
+                info!(
+                    "{} requests executed in {} s",
+                    task.0,
+                    duration as f32 / 1000.0
+                );
             }
         }
 
@@ -272,7 +273,7 @@ pub async fn network_capture_sink_task(
                 let request = if length == 0 {
                     "".to_string()
                 } else {
-                    format!("BEGIN; {}; COMMIT; ", values.join(""))
+                    values.join("")
                 };
 
                 if let Err(e) = sender_request.send(request).await {
@@ -292,7 +293,7 @@ pub async fn network_capture_sink_task(
             }
         }
 
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(100)).await;
     }
 
     Ok(())

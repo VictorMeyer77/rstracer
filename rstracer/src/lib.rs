@@ -3,8 +3,8 @@ use crate::pipeline::database::{copy_layer, execute_request, get_schema};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::{create_schema_request, Schema};
 use crate::pipeline::{
-    execute_request_task, network_capture_sink_task, open_file_sink_task, process_sink_task,
-    schedule_request_task,
+    execute_request_task, execute_schedule_request_task, network_capture_sink_task,
+    open_file_sink_task, process_sink_task,
 };
 use network::capture::Capture;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -35,8 +35,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let (sender_capture, receiver_capture): (Sender<Capture>, Receiver<Capture>) =
         channel(config.network.channel_size);
 
-    let schedule_request_task =
-        start_schedule_request_task(&config, &schema, &sender_request, &stop_flag);
+    let schedule_request_task = start_schedule_request_task(&config, &schema, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);
     let process_source_task = start_process_source_task(&config, sender_process, &stop_flag);
     let process_sink_task =
@@ -102,22 +101,15 @@ fn start_execute_request_task(
 fn start_schedule_request_task(
     config: &config::Config,
     schema: &Schema,
-    sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
 ) -> JoinHandle<()> {
     let config_clone = config.clone();
     let schema_clone = schema.clone();
-    let sender_request_clone = sender_request.clone();
     let stop_flag_read = stop_flag.clone();
     let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) = schedule_request_task(
-            &config_clone,
-            schema_clone,
-            sender_request_clone,
-            stop_flag_read,
-        )
-        .await
+        if let Err(e) =
+            execute_schedule_request_task(&config_clone, schema_clone, stop_flag_read).await
         {
             stop_flag_write.store(true, Ordering::Release);
             error!("{}", e);
