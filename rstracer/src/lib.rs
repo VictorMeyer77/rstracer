@@ -35,7 +35,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let (sender_capture, receiver_capture): (Sender<Capture>, Receiver<Capture>) =
         channel(config.network.channel_size);
 
-    let schedule_request_task = start_schedule_request_task(&config, &schema, &stop_flag);
+    let execute_schedule_request_task = start_schedule_request_task(&config, &schema, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);
     let process_source_task = start_process_source_task(&config, sender_process, &stop_flag);
     let process_sink_task =
@@ -48,7 +48,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         start_network_capture_sink_task(&config, receiver_capture, &sender_request, &stop_flag);
 
     let (
-        schedule_request_result,
+        execute_schedule_request_result,
         execute_request_result,
         process_source_result,
         process_sink_result,
@@ -57,7 +57,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         network_capture_source_result,
         network_capture_sink_result,
     ) = join!(
-        schedule_request_task,
+        execute_schedule_request_task,
         execute_request_task,
         process_source_task,
         process_sink_task,
@@ -69,7 +69,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     copy_layer(&schema, "memory", "disk", config.persist_layer.to_list())?;
 
-    schedule_request_result?;
+    execute_schedule_request_result?;
     execute_request_result?;
     process_source_result?;
     process_sink_result?;

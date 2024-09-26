@@ -197,30 +197,32 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_header (
     _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_header_serial'),
     packet_id UHUGEINT,
     id USMALLINT,
-    qr BOOL,
+    is_response USMALLINT,
     opcode USMALLINT,
-    aa BOOL,
-    tc BOOL,
-    rd BOOL,
-    ra BOOL,
-    z USMALLINT,
+    is_authoriative USMALLINT,
+    is_truncated USMALLINT,
+    is_recursion_desirable USMALLINT,
+    is_recursion_available USMALLINT,
+    zero_reserved USMALLINT,
+    is_answer_authenticated USMALLINT,
+    is_non_authenticated_data USMALLINT,
     rcode USMALLINT,
-    qd_count USMALLINT,
-    an_count USMALLINT,
-    ns_count USMALLINT,
-    ar_count USMALLINT,
+    query_count USMALLINT,
+    response_count USMALLINT,
+    authority_rr_count USMALLINT,
+    additional_rr_count USMALLINT,
     inserted_at TIMESTAMP,
 );
 "#;
 
-const BRONZE_NETWORK_DNS_QUESTION: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_question_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_question (
-    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_question_serial'),
+const BRONZE_NETWORK_DNS_QUERY: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_query_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_query (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_query_serial'),
     packet_id UHUGEINT,
-    qname TEXT,
-    qtype USMALLINT,
-    qclass USMALLINT,
+    qname UTINYINT[],
+    qtype TEXT,
+    qclass TEXT,
     inserted_at TIMESTAMP,
 );
 "#;
@@ -230,16 +232,15 @@ CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_record_serial;
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_record (
     _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_record_serial'),
     packet_id UHUGEINT,
-    additional BOOL,
-    name TEXT,
-    rr_type USMALLINT,
-    rr_class USMALLINT,
+    response_type USMALLINT,
+    name_tag USMALLINT,
+    r_type TEXT,
+    r_class TEXT,
     ttl UINTEGER,
     rdlength USMALLINT,
     rdata UTINYINT[],
     inserted_at TIMESTAMP,
-);
-"#;
+);"#;
 
 const BRONZE_NETWORK_HTTP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_http_serial;
@@ -335,7 +336,7 @@ fn create_tables_request(database: &str) -> String {
         BRONZE_NETWORK_ICMP.replace("{db_name}", database),
         BRONZE_NETWORK_TLS.replace("{db_name}", database),
         BRONZE_NETWORK_DNS_HEADER.replace("{db_name}", database),
-        BRONZE_NETWORK_DNS_QUESTION.replace("{db_name}", database),
+        BRONZE_NETWORK_DNS_QUERY.replace("{db_name}", database),
         BRONZE_NETWORK_DNS_RECORD.replace("{db_name}", database),
         BRONZE_NETWORK_HTTP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),

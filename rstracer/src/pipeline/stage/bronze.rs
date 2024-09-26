@@ -1,5 +1,4 @@
 use lsof::lsof::OpenFile;
-use network::capture::application::dns::{Dns, DnsHeaderFlags};
 use network::capture::application::http::Http;
 use network::capture::application::tls::Tls;
 use network::capture::application::{Application, ApplicationProtocol};
@@ -8,6 +7,7 @@ use network::capture::network::{Network, NetworkProtocol};
 use network::capture::transport::{Transport, TransportProtocol};
 use network::capture::Capture;
 use pnet::packet::arp::Arp;
+use pnet::packet::dns::Dns;
 use pnet::packet::ethernet::Ethernet;
 use pnet::packet::icmp::Icmp;
 use pnet::packet::icmpv6::Icmpv6;
@@ -15,6 +15,7 @@ use pnet::packet::ipv4::Ipv4;
 use pnet::packet::ipv6::Ipv6;
 use pnet::packet::tcp::Tcp;
 use pnet::packet::udp::Udp;
+use pnet::packet::PrimitiveValues;
 use ps::ps::Process;
 use uuid::Uuid;
 
@@ -157,7 +158,7 @@ impl Bronze for Application {
             ApplicationProtocol::Dns => {
                 let dns = self.dns.clone().unwrap();
                 let mut request_buffer = bronze_dns_header(&dns, foreign_id.unwrap());
-                request_buffer.push_str(&bronze_dns_question(&dns, foreign_id.unwrap()));
+                request_buffer.push_str(&bronze_dns_query(&dns, foreign_id.unwrap()));
                 request_buffer.push_str(&bronze_dns_record(&dns, foreign_id.unwrap()));
                 request_buffer
             }
@@ -364,92 +365,129 @@ fn bronze_icmpv6(icmpv6: Icmpv6, packet_id: u128) -> String {
 // APPLICATION
 
 fn bronze_dns_header(dns: &Dns, packet_id: u128) -> String {
-    let dns_header_flags = DnsHeaderFlags::try_from(dns.header.flags).unwrap();
     format!(
         r#"INSERT INTO memory.bronze_network_dns_header (
-                    packet_id,
-                    id,
-                    qr,
-                    opcode,
-                    aa,
-                    tc,
-                    rd,
-                    ra,
-                    z,
-                    rcode,
-                    qd_count,
-                    an_count,
-                    ns_count,
-                    ar_count,
-                    inserted_at
-                    ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, CURRENT_TIMESTAMP);"#,
+                        packet_id,
+                        id,
+                        is_response,
+                        opcode,
+                        is_authoriative,
+                        is_truncated,
+                        is_recursion_desirable,
+                        is_recursion_available,
+                        zero_reserved,
+                        is_answer_authenticated,
+                        is_non_authenticated_data,
+                        rcode,
+                        query_count,
+                        response_count,
+                        authority_rr_count,
+                        additional_rr_count,
+                        inserted_at
+                    ) VALUES ({}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, CURRENT_TIMESTAMP);"#,
         packet_id,
-        dns.header.id,
-        dns_header_flags.qr,
-        dns_header_flags.opcode,
-        dns_header_flags.aa,
-        dns_header_flags.tc,
-        dns_header_flags.rd,
-        dns_header_flags.ra,
-        dns_header_flags.z,
-        dns_header_flags.rcode,
-        dns.header.qd_count,
-        dns.header.an_count,
-        dns.header.ns_count,
-        dns.header.ar_count,
+        dns.id,
+        dns.is_response,
+        dns.opcode.to_primitive_values().0,
+        dns.is_authoriative,
+        dns.is_truncated,
+        dns.is_recursion_desirable,
+        dns.is_recursion_available,
+        dns.zero_reserved,
+        dns.is_answer_authenticated,
+        dns.is_non_authenticated_data,
+        dns.rcode.to_primitive_values().0,
+        dns.query_count,
+        dns.response_count,
+        dns.authority_rr_count,
+        dns.additional_rr_count,
     )
 }
 
-fn bronze_dns_question(dns: &Dns, packet_id: u128) -> String {
-    format!(
-        r#"INSERT INTO memory.bronze_network_dns_question (
+fn bronze_dns_query(dns: &Dns, packet_id: u128) -> String {
+    let mut request_buffer = String::new();
+    if !dns.queries.is_empty() {
+        request_buffer.push_str(
+            r#"INSERT INTO memory.bronze_network_dns_query (
                     packet_id,
                     qname,
                     qtype,
                     qclass,
                     inserted_at
-                    ) VALUES ({}, '{}', {}, {}, CURRENT_TIMESTAMP);"#,
-        packet_id, dns.question.qname, dns.question.qtype, dns.question.qclass,
-    )
+                    ) VALUES "#,
+        );
+
+        for query in &dns.queries {
+            request_buffer.push_str(&format!(
+                "({}, {:?}, '{}', '{}', CURRENT_TIMESTAMP),",
+                packet_id, query.qname, query.qtype, query.qclass,
+            ));
+        }
+        request_buffer.pop();
+        request_buffer.push(';')
+    }
+    request_buffer
 }
 
 fn bronze_dns_record(dns: &Dns, packet_id: u128) -> String {
-    let mut request_buffer = r#"INSERT INTO memory.bronze_network_dns_record (
+    let mut request_buffer = String::new();
+    if !dns.responses.is_empty() || !dns.additional.is_empty() || !dns.authorities.is_empty() {
+        request_buffer.push_str(
+            r#"INSERT INTO memory.bronze_network_dns_record (
                     packet_id,
-                    additional,
-                    name,
-                    rr_type,
-                    rr_class,
+                    response_type,
+                    name_tag,
+                    r_type,
+                    r_class,
                     ttl,
                     rdlength,
                     rdata,
                     inserted_at
-                    ) VALUES "#
-        .to_string();
+                    ) VALUES "#,
+        );
 
-    request_buffer.push_str(&format!(
-        "({}, false, '{}', {}, {}, {}, {}, {:?}, CURRENT_TIMESTAMP)",
-        packet_id,
-        dns.answer.name,
-        dns.answer.rr_type,
-        dns.answer.rr_class,
-        dns.answer.ttl,
-        dns.answer.rdlength,
-        dns.answer.rdata,
-    ));
-    for additional in &dns.additional {
-        request_buffer.push_str(&format!(
-            ",({}, true, '{}', {}, {}, {}, {}, {:?}, CURRENT_TIMESTAMP)",
-            packet_id,
-            additional.name,
-            additional.rr_type,
-            additional.rr_class,
-            additional.ttl,
-            additional.rdlength,
-            additional.rdata,
-        ));
+        for response in &dns.responses {
+            request_buffer.push_str(&format!(
+                "({}, 0, '{}', '{}', '{}', {}, {}, {:?}, CURRENT_TIMESTAMP),",
+                packet_id,
+                response.name_tag,
+                response.rtype,
+                response.rclass,
+                response.ttl,
+                response.data_len,
+                response.data,
+            ));
+        }
+
+        for additional in &dns.additional {
+            request_buffer.push_str(&format!(
+                "({}, 1, '{}', '{}', '{}', {}, {}, {:?}, CURRENT_TIMESTAMP),",
+                packet_id,
+                additional.name_tag,
+                additional.rtype,
+                additional.rclass,
+                additional.ttl,
+                additional.data_len,
+                additional.data,
+            ));
+        }
+
+        for response in &dns.authorities {
+            request_buffer.push_str(&format!(
+                "({}, 2, '{}', '{}', '{}', {}, {}, {:?}, CURRENT_TIMESTAMP),",
+                packet_id,
+                response.name_tag,
+                response.rtype,
+                response.rclass,
+                response.ttl,
+                response.data_len,
+                response.data,
+            ));
+        }
+        request_buffer.pop();
+        request_buffer.push(';')
     }
-    request_buffer.push(';');
+
     request_buffer
 }
 
