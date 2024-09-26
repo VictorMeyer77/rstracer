@@ -284,6 +284,9 @@ pub mod tests {
 
         let application = capture.application.unwrap();
         assert_eq!(application.protocol, ApplicationProtocol::Dns);
-        assert_eq!(application.dns.unwrap().question.qname, "taivem.com");
+        assert_eq!(
+            &String::from_utf8_lossy(&application.dns.unwrap().queries.first().unwrap().qname),
+            "\u{6}taivem\u{3}com\0"
+        );
     }
 }

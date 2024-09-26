@@ -1,12 +1,13 @@
-use crate::capture::application::dns::Dns;
 use crate::capture::application::http::Http;
 use crate::capture::application::tls::Tls;
 use crate::capture::transport::{Transport, TransportProtocol};
 use crate::capture::Layer;
 use crate::error::Error;
-use std::fmt;
+use pnet::packet::dns::{Dns, DnsPacket};
+use pnet::packet::FromPacket;
+use std::panic::{set_hook, take_hook, AssertUnwindSafe};
+use std::{fmt, panic};
 
-pub mod dns;
 pub mod http;
 pub mod tls;
 
@@ -68,12 +69,16 @@ impl Application {
     }
 }
 
+// todo check 'pnet' crate future evolution to handle DNS as other components
+
 fn parse_dns(packet: &[u8]) -> Option<Application> {
-    if let Ok(dns) = Dns::from_bytes(packet) {
-        Some(Application::dns(dns))
-    } else {
-        None
-    }
+    let original_hook = take_hook();
+    set_hook(Box::new(|_| {}));
+    let result = panic::catch_unwind(AssertUnwindSafe(|| {
+        DnsPacket::new(packet).map(|dns| Application::dns(dns.from_packet()))
+    }));
+    set_hook(original_hook);
+    result.unwrap_or(None)
 }
 
 fn parse_http(packet: &[u8]) -> Option<Application> {
@@ -126,7 +131,6 @@ pub fn read_packet(transport: &Transport) -> Result<Application, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::capture::application::dns::tests::create_dns_packet;
     use crate::capture::application::http::tests::create_http_packet;
     use crate::capture::application::tls::TlsContentType;
     use pnet::packet::tcp::Tcp;
@@ -173,6 +177,45 @@ mod tests {
         }
     }
 
+    fn create_dns_packet() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&create_dns_header());
+        bytes.extend_from_slice(&create_dns_query());
+        bytes.extend_from_slice(&create_dns_record());
+        bytes.extend_from_slice(&create_dns_record());
+        bytes
+    }
+
+    fn create_dns_header() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&[0x12, 0x34]);
+        bytes.extend_from_slice(&[0x81, 0x80]);
+        bytes.extend_from_slice(&[0x00, 0x01]);
+        bytes.extend_from_slice(&[0x00, 0x01]);
+        bytes.extend_from_slice(&[0x00, 0x00]);
+        bytes.extend_from_slice(&[0x00, 0x00]);
+        bytes
+    }
+
+    fn create_dns_query() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&[
+            3, 119, 119, 119, 7, 101, 120, 97, 109, 112, 108, 101, 3, 99, 111, 109, 0,
+        ]);
+        bytes.extend_from_slice(&[0x00, 0x01]);
+        bytes.extend_from_slice(&[0x00, 0x01]);
+        bytes
+    }
+
+    fn create_dns_record() -> Vec<u8> {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&[
+            0xc0, 0x0c, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x3c, 0x00, 0x04, 0x5d, 0xb8,
+            0xd8, 0x22,
+        ]);
+        bytes
+    }
+
     #[test]
     fn test_display_application_protocol() {
         assert_eq!(ApplicationProtocol::Dns.to_string(), "dns");
@@ -184,8 +227,14 @@ mod tests {
         let transport = create_mock_tcp_transport(&dns_bytes);
 
         let application = read_packet(&transport).unwrap();
+        let dns = application.dns.unwrap();
+
         assert_eq!(application.protocol, ApplicationProtocol::Dns);
-        assert_eq!(application.dns.unwrap().question.qname, "www.example.com");
+        assert_eq!(
+            &String::from_utf8_lossy(&dns.queries.first().unwrap().qname),
+            "\u{3}www\u{7}example\u{3}com\0"
+        );
+        assert_eq!(&dns.responses.first().unwrap().data, &[93, 184, 216, 34])
     }
 
     #[test]
@@ -194,8 +243,14 @@ mod tests {
         let transport = create_mock_udp_transport(&dns_bytes);
 
         let application = read_packet(&transport).unwrap();
+        let dns = application.dns.unwrap();
+
         assert_eq!(application.protocol, ApplicationProtocol::Dns);
-        assert_eq!(application.dns.unwrap().question.qname, "www.example.com");
+        assert_eq!(
+            &String::from_utf8_lossy(&dns.queries.first().unwrap().qname),
+            "\u{3}www\u{7}example\u{3}com\0"
+        );
+        assert_eq!(&dns.responses.first().unwrap().data, &[93, 184, 216, 34])
     }
 
     #[test]
