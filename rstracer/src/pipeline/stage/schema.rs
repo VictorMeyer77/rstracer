@@ -228,11 +228,11 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_query (
 "#;
 
 const BRONZE_NETWORK_DNS_RECORD: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_record_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_record (
-    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_record_serial'),
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_response_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_response (
+    _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_response_serial'),
     packet_id UHUGEINT,
-    response_type USMALLINT,
+    response_from USMALLINT,
     name_tag USMALLINT,
     r_type TEXT,
     r_class TEXT,

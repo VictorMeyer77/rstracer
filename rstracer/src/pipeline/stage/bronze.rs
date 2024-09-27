@@ -433,9 +433,9 @@ fn bronze_dns_record(dns: &Dns, packet_id: u128) -> String {
     let mut request_buffer = String::new();
     if !dns.responses.is_empty() || !dns.additional.is_empty() || !dns.authorities.is_empty() {
         request_buffer.push_str(
-            r#"INSERT INTO memory.bronze_network_dns_record (
+            r#"INSERT INTO memory.bronze_network_dns_response (
                     packet_id,
-                    response_type,
+                    response_from,
                     name_tag,
                     r_type,
                     r_class,
