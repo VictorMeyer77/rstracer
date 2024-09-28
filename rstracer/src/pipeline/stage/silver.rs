@@ -59,6 +59,25 @@ FROM bronze_open_files
 );
 "#;
 
+const SILVER_NETWORK_ETHERNET: &str = r#"
+INSERT OR IGNORE INTO memory.silver_network_ethernet BY NAME
+(
+SELECT
+	ethernet.packet_id AS _id,
+	ethernet.source,
+	ethernet.destination,
+	ethernet.ether_type,
+	ethernet.payload_length,
+	packet.length AS packet_length,
+	packet.interface AS interface,
+	packet.created_at,
+	packet.brz_ingestion_duration,
+	CURRENT_TIMESTAMP AS inserted_at,
+	AGE(packet.inserted_at) AS svr_ingestion_duration
+FROM bronze_network_ethernet ethernet LEFT JOIN bronze_network_packet packet ON ethernet.packet_id = packet._id
+);
+"#;
+
 const SILVER_NETWORK_DNS: &str = r#"
 INSERT OR IGNORE INTO memory.silver_network_dns BY NAME
 (
@@ -225,9 +244,10 @@ FROM
 
 pub fn silver_request() -> String {
     format!(
-        "{} {} {} {} {}",
+        "{} {} {} {} {} {}",
         SILVER_PROCESS_LIST,
         SILVER_OPEN_FILES,
+        SILVER_NETWORK_ETHERNET,
         SILVER_NETWORK_DNS,
         SILVER_NETWORK_IP,
         SILVER_NETWORK_TRANSPORT
