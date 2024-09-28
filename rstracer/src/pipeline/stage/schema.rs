@@ -350,6 +350,8 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_ip (
     next_protocol USMALLINT,
     source TEXT,
     destination TEXT,
+    packet_length UINTEGER,
+    interface TEXT,
     created_at TIMESTAMP,
     brz_ingestion_duration INTERVAL,
     inserted_at TIMESTAMP,

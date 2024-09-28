@@ -162,6 +162,8 @@ INSERT OR IGNORE INTO memory.silver_network_ip BY NAME
 (
 SELECT
     ip.*,
+    packet.length AS packet_length,
+    packet.interface AS interface,
     packet.created_at,
     packet.brz_ingestion_duration,
     CURRENT_TIMESTAMP AS inserted_at,
