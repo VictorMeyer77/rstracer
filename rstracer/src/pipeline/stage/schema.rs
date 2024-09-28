@@ -303,6 +303,22 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_open_files (
 );
 "#;
 
+const SILVER_NETWORK_PACKET: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_network_packet (
+    _id UHUGEINT PRIMARY KEY,
+    interface TEXT,
+    length UINTEGER,
+    created_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL,
+    data_link TEXT,
+    network TEXT,
+    transport TEXT,
+    application TEXT,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
+);
+"#;
+
 const SILVER_NETWORK_ETHERNET: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.silver_network_ethernet (
     _id UHUGEINT PRIMARY KEY,
@@ -431,7 +447,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -449,6 +465,7 @@ fn create_tables_request(database: &str) -> String {
         BRONZE_NETWORK_HTTP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
+        SILVER_NETWORK_PACKET.replace("{db_name}", database),
         SILVER_NETWORK_ETHERNET.replace("{db_name}", database),
         SILVER_NETWORK_DNS.replace("{db_name}", database),
         SILVER_NETWORK_IP.replace("{db_name}", database),

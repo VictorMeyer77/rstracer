@@ -59,6 +59,53 @@ FROM bronze_open_files
 );
 "#;
 
+const SILVER_NETWORK_PACKET: &str = r#"
+INSERT OR IGNORE INTO memory.silver_network_packet BY NAME
+(
+    SELECT
+        packet._id,
+        packet.interface,
+        packet.length,
+        packet.created_at,
+        packet.brz_ingestion_duration,
+        CASE
+            WHEN ethernet._id IS NOT NULL THEN 'ethernet'
+            ELSE 'unknown'
+        END AS data_link,
+        CASE
+            WHEN ipv4._id IS NOT NULL THEN 'ipv4'
+            WHEN ipv6._id IS NOT NULL THEN 'ipv6'
+            WHEN arp._id IS NOT NULL THEN 'arp'
+            ELSE 'unknown'
+        END AS network,
+        CASE
+            WHEN tcp._id IS NOT NULL THEN 'tcp'
+            WHEN udp._id IS NOT NULL THEN 'udp'
+            WHEN icmp._id IS NOT NULL THEN 'icmp'
+            ELSE 'unknown'
+        END AS transport,
+        CASE
+            WHEN dns._id IS NOT NULL THEN 'dns'
+            WHEN tls._id IS NOT NULL THEN 'tls'
+            WHEN http._id IS NOT NULL THEN 'http'
+            ELSE 'unknown'
+        END AS application,
+        CURRENT_TIMESTAMP AS inserted_at,
+        AGE(packet.inserted_at) AS svr_ingestion_duration
+    FROM bronze_network_packet packet
+    LEFT JOIN bronze_network_ethernet ethernet ON packet._id = ethernet.packet_id
+    LEFT JOIN bronze_network_ipv4 ipv4 ON packet._id = ipv4.packet_id
+    LEFT JOIN bronze_network_ipv6 ipv6 ON packet._id = ipv6.packet_id
+    LEFT JOIN bronze_network_arp arp ON packet._id = arp.packet_id
+    LEFT JOIN bronze_network_tcp tcp ON packet._id = tcp.packet_id
+    LEFT JOIN bronze_network_udp udp ON packet._id = udp.packet_id
+    LEFT JOIN bronze_network_icmp icmp ON packet._id = icmp.packet_id
+    LEFT JOIN bronze_network_dns_header dns ON packet._id = dns.packet_id
+    LEFT JOIN bronze_network_tls tls ON packet._id = tls.packet_id
+    LEFT JOIN bronze_network_http http ON packet._id = http.packet_id
+);
+"#;
+
 const SILVER_NETWORK_ETHERNET: &str = r#"
 INSERT OR IGNORE INTO memory.silver_network_ethernet BY NAME
 (
@@ -268,9 +315,10 @@ FROM bronze_network_arp arp LEFT JOIN memory.bronze_network_packet packet ON arp
 
 pub fn silver_request() -> String {
     format!(
-        "{} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {}",
         SILVER_PROCESS_LIST,
         SILVER_OPEN_FILES,
+        SILVER_NETWORK_PACKET,
         SILVER_NETWORK_ETHERNET,
         SILVER_NETWORK_DNS,
         SILVER_NETWORK_IP,
