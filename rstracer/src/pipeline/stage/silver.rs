@@ -242,14 +242,39 @@ FROM
 );
 "#;
 
+const SILVER_NETWORK_ARP: &str = r#"
+INSERT OR IGNORE INTO memory.silver_network_arp BY NAME
+(
+SELECT
+    arp.packet_id AS _id,
+    arp.hardware_type,
+    arp.protocol_type,
+    arp.hw_addr_len,
+    arp.proto_addr_len,
+    arp.operation,
+    arp.sender_hw_addr,
+    arp.sender_proto_addr,
+    arp.target_hw_addr,
+    arp.target_proto_addr,
+    packet.length AS packet_length,
+    packet.interface AS interface,
+    packet.created_at,
+    packet.brz_ingestion_duration,
+    CURRENT_TIMESTAMP AS inserted_at,
+    AGE(packet.inserted_at) AS svr_ingestion_duration
+FROM bronze_network_arp arp LEFT JOIN memory.bronze_network_packet packet ON arp.packet_id = packet._id
+);
+"#;
+
 pub fn silver_request() -> String {
     format!(
-        "{} {} {} {} {} {}",
+        "{} {} {} {} {} {} {}",
         SILVER_PROCESS_LIST,
         SILVER_OPEN_FILES,
         SILVER_NETWORK_ETHERNET,
         SILVER_NETWORK_DNS,
         SILVER_NETWORK_IP,
-        SILVER_NETWORK_TRANSPORT
+        SILVER_NETWORK_TRANSPORT,
+        SILVER_NETWORK_ARP
     )
 }
