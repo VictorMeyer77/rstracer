@@ -191,9 +191,43 @@ FROM
 );
 "#;
 
+const SILVER_NETWORK_TRANSPORT: &str = r#"
+INSERT OR IGNORE INTO memory.silver_network_transport BY NAME
+(
+SELECT
+    transport.*,
+    packet.length AS packet_length,
+    packet.interface AS interface,
+    packet.created_at,
+    packet.brz_ingestion_duration,
+    CURRENT_TIMESTAMP AS inserted_at,
+    AGE(packet.inserted_at) AS svr_ingestion_duration
+FROM
+(
+    SELECT
+        packet_id AS _id,
+        'TCP' AS protocol,
+        source,
+        destination
+    FROM bronze_network_tcp
+	UNION ALL
+	SELECT
+		packet_id AS _id,
+		'UDP' AS protocol,
+		source,
+		destination
+	FROM bronze_network_udp
+) transport LEFT JOIN bronze_network_packet packet ON transport._id = packet._id
+);
+"#;
+
 pub fn silver_request() -> String {
     format!(
-        "{} {} {} {}",
-        SILVER_PROCESS_LIST, SILVER_OPEN_FILES, SILVER_NETWORK_DNS, SILVER_NETWORK_IP
+        "{} {} {} {} {}",
+        SILVER_PROCESS_LIST,
+        SILVER_OPEN_FILES,
+        SILVER_NETWORK_DNS,
+        SILVER_NETWORK_IP,
+        SILVER_NETWORK_TRANSPORT
     )
 }

@@ -55,7 +55,7 @@ const BRONZE_NETWORK_PACKET: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_packet (
     _id UHUGEINT PRIMARY KEY,
     interface TEXT,
-    length INTEGER,
+    length UINTEGER,
     created_at TIMESTAMP,
     inserted_at TIMESTAMP,
     brz_ingestion_duration INTERVAL
@@ -357,6 +357,21 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_ip (
 );
 "#;
 
+const SILVER_NETWORK_TRANSPORT: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_network_transport (
+    _id UHUGEINT PRIMARY KEY,
+    protocol TEXT,
+    source USMALLINT,
+    destination USMALLINT,
+    packet_length UINTEGER,
+    interface TEXT,
+    created_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -377,7 +392,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -396,7 +411,8 @@ fn create_tables_request(database: &str) -> String {
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
         SILVER_NETWORK_DNS.replace("{db_name}", database),
-        SILVER_NETWORK_IP.replace("{db_name}", database)
+        SILVER_NETWORK_IP.replace("{db_name}", database),
+        SILVER_NETWORK_TRANSPORT.replace("{db_name}", database)
     )
 }
 
