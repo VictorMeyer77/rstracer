@@ -435,10 +435,10 @@ fn bronze_dns_record(dns: &Dns, packet_id: u128) -> String {
         request_buffer.push_str(
             r#"INSERT INTO memory.bronze_network_dns_response (
                     packet_id,
-                    response_from,
+                    origin,
                     name_tag,
-                    r_type,
-                    r_class,
+                    rtype,
+                    rclass,
                     ttl,
                     rdlength,
                     rdata,

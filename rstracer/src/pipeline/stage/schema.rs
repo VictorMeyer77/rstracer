@@ -232,10 +232,10 @@ CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_dns_response_serial;
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_dns_response (
     _id INTEGER PRIMARY KEY DEFAULT nextval('{db_name}.bronze_network_dns_response_serial'),
     packet_id UHUGEINT,
-    response_from USMALLINT,
+    origin USMALLINT,
     name_tag USMALLINT,
-    r_type TEXT,
-    r_class TEXT,
+    rtype TEXT,
+    rclass TEXT,
     ttl UINTEGER,
     rdlength USMALLINT,
     rdata UTINYINT[],
@@ -303,6 +303,44 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_open_files (
 );
 "#;
 
+const SILVER_NETWORK_DNS: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_network_dns (
+    _id TEXT PRIMARY KEY,
+    packet_id UHUGEINT,
+    id USMALLINT,
+    is_response USMALLINT,
+    opcode USMALLINT,
+    is_authoriative USMALLINT,
+    is_truncated USMALLINT,
+    is_recursion_desirable USMALLINT,
+    is_recursion_available USMALLINT,
+    zero_reserved USMALLINT,
+    is_answer_authenticated USMALLINT,
+    is_non_authenticated_data USMALLINT,
+    rcode USMALLINT,
+    query_count USMALLINT,
+    response_count USMALLINT,
+    authority_rr_count USMALLINT,
+    additional_rr_count USMALLINT,
+    qname UTINYINT[],
+    qtype TEXT,
+    qclass TEXT,
+    origin USMALLINT,
+    name_tag USMALLINT,
+    rtype TEXT,
+    rclass TEXT,
+    ttl UINTEGER,
+    rdlength USMALLINT,
+    rdata UTINYINT[],
+    created_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL,
+    question_parsed TEXT,
+    response_parsed TEXT,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -323,7 +361,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -341,6 +379,7 @@ fn create_tables_request(database: &str) -> String {
         BRONZE_NETWORK_HTTP.replace("{db_name}", database),
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
+        SILVER_NETWORK_DNS.replace("{db_name}", database),
     )
 }
 
