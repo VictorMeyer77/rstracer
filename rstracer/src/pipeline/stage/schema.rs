@@ -341,6 +341,22 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_dns (
 );
 "#;
 
+const SILVER_NETWORK_IP: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_network_ip (
+    _id UHUGEINT PRIMARY KEY,
+    version USMALLINT,
+    length USMALLINT,
+    hop_limit USMALLINT,
+    next_protocol USMALLINT,
+    source TEXT,
+    destination TEXT,
+    created_at TIMESTAMP,
+    brz_ingestion_duration INTERVAL,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -361,7 +377,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -380,6 +396,7 @@ fn create_tables_request(database: &str) -> String {
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
         SILVER_NETWORK_DNS.replace("{db_name}", database),
+        SILVER_NETWORK_IP.replace("{db_name}", database)
     )
 }
 

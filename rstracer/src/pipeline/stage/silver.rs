@@ -157,9 +157,43 @@ LEFT JOIN
 );
 "#;
 
+const SILVER_NETWORK_IP: &str = r#"
+INSERT OR IGNORE INTO memory.silver_network_ip BY NAME
+(
+SELECT
+    ip.*,
+    packet.created_at,
+    packet.brz_ingestion_duration,
+    CURRENT_TIMESTAMP AS inserted_at,
+    AGE(packet.inserted_at) AS svr_ingestion_duration
+FROM
+(
+    SELECT
+        packet_id AS _id,
+        version,
+        total_length AS length,
+        ttl AS hop_limit,
+        next_level_protocol AS next_protocol,
+        source,
+        destination
+    FROM memory.bronze_network_ipv4
+    UNION ALL
+    SELECT
+        packet_id AS _id,
+        version,
+        payload_length AS length,
+        hop_limit,
+        next_header AS next_protocol,
+        source,
+        destination
+    FROM memory.bronze_network_ipv6
+) ip LEFT JOIN memory.bronze_network_packet packet ON ip._id = packet._id
+);
+"#;
+
 pub fn silver_request() -> String {
     format!(
-        "{} {} {}",
-        SILVER_PROCESS_LIST, SILVER_OPEN_FILES, SILVER_NETWORK_DNS
+        "{} {} {} {}",
+        SILVER_PROCESS_LIST, SILVER_OPEN_FILES, SILVER_NETWORK_DNS, SILVER_NETWORK_IP
     )
 }
