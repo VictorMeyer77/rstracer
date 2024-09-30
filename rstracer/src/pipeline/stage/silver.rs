@@ -313,7 +313,7 @@ FROM bronze_network_arp arp LEFT JOIN memory.bronze_network_packet packet ON arp
 );
 "#;
 
-pub fn silver_request() -> String {
+pub fn request() -> String {
     format!(
         "{} {} {} {} {} {} {} {}",
         SILVER_PROCESS_LIST,

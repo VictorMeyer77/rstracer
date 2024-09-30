@@ -3,8 +3,8 @@ use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
-use crate::pipeline::stage::silver::silver_request;
 use crate::pipeline::stage::vacuum::vacuum_request;
+use crate::pipeline::stage::{gold, silver};
 use chrono::Local;
 use lsof::lsof::OpenFile;
 use network::capture::Capture;
@@ -77,7 +77,11 @@ pub async fn execute_schedule_request_task(
 ) -> Result<(), Error> {
     let mut tasks: HashMap<(&str, String, u64), i64> = HashMap::new();
     tasks.insert(
-        ("silver", silver_request(), config.schedule.silver),
+        ("silver", silver::request(), config.schedule.silver),
+        Local::now().timestamp(),
+    );
+    tasks.insert(
+        ("gold", gold::request(), config.schedule.gold),
         Local::now().timestamp(),
     );
     tasks.insert(

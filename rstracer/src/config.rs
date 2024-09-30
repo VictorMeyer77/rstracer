@@ -93,7 +93,7 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("vacuum.gold", 0)?
         // schedule
         .set_default("schedule.silver", 2)?
-        .set_default("schedule.gold", 0)?
+        .set_default("schedule.gold", 2)?
         .set_default("schedule.vacuum", 30)?
         // request
         .set_default("request.channel_size", 100)?
