@@ -429,6 +429,22 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_arp (
 
 // GOLD
 
+const GOLD_OPEN_FILES_NETWORK: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_open_files_network_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_network (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_open_files_network_serial'),
+    pid USMALLINT,
+    uid USMALLINT,
+    source_address TEXT,
+    source_port TEXT,
+    destination_address TEXT,
+    destination_port TEXT,
+    started_at TIMESTAMP,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (pid, uid, source_address, source_port)
+);
+"#;
+
 const GOLD_NETWORK_IP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_network_ip_serial;
 CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
@@ -459,7 +475,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -483,6 +499,7 @@ fn create_tables_request(database: &str) -> String {
         SILVER_NETWORK_IP.replace("{db_name}", database),
         SILVER_NETWORK_TRANSPORT.replace("{db_name}", database),
         SILVER_NETWORK_ARP.replace("{db_name}", database),
+        GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database)
     )
 }
