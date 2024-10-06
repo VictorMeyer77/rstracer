@@ -150,7 +150,7 @@ fn device_addresses_to_sql(device: &Device) -> String {
                         address,
                         netmask,
                         broadcast_address,
-                        destination_addrss,
+                        destination_address,
                         inserted_at
                     )
                     VALUES ('{}', '{}', {}, {}, {}, CURRENT_TIMESTAMP);"#,

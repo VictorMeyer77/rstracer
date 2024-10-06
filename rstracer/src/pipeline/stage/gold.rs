@@ -18,7 +18,7 @@ INSERT OR REPLACE INTO memory.gold_dim_process BY NAME
             command,
             inserted_at,
             row_number() OVER (PARTITION BY pid, lstart ORDER BY inserted_at DESC) AS row_num
-        FROM silver_process_list
+        FROM memory.silver_process_list
 
     )
     WHERE ROW_NUM = 1

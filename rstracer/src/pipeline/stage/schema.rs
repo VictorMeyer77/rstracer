@@ -63,12 +63,14 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_packet (
 "#;
 
 const BRONZE_NETWORK_INTERFACE_ADDRESS: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_interface_address_serial;
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_interface_address (
+    _id INTEGER DEFAULT nextval('{db_name}.bronze_network_interface_address_serial'),
     interface TEXT,
     address TEXT,
     netmask TEXT,
     broadcast_address TEXT,
-    destination_addrss TEXT,
+    destination_address TEXT,
     inserted_at TIMESTAMP,
     PRIMARY KEY (interface, address)
 );
@@ -331,6 +333,18 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_packet (
 );
 "#;
 
+const SILVER_NETWORK_INTERFACE_ADDRESS: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.silver_network_interface_address (
+    _id INTEGER PRIMARY KEY,
+    interface TEXT,
+    address INET,
+    broadcast_address INET,
+    destination_address INET,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL,
+);
+"#;
+
 const SILVER_NETWORK_ETHERNET: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.silver_network_ethernet (
     _id UHUGEINT PRIMARY KEY,
@@ -531,7 +545,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -551,6 +565,7 @@ fn create_tables_request(database: &str) -> String {
         SILVER_PROCESS_LIST.replace("{db_name}", database),
         SILVER_OPEN_FILES.replace("{db_name}", database),
         SILVER_NETWORK_PACKET.replace("{db_name}", database),
+        SILVER_NETWORK_INTERFACE_ADDRESS.replace("{db_name}", database),
         SILVER_NETWORK_ETHERNET.replace("{db_name}", database),
         SILVER_NETWORK_DNS.replace("{db_name}", database),
         SILVER_NETWORK_IP.replace("{db_name}", database),
