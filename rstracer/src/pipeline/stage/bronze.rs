@@ -6,6 +6,7 @@ use network::capture::data_link::{DataLink, DataLinkProtocol};
 use network::capture::network::{Network, NetworkProtocol};
 use network::capture::transport::{Transport, TransportProtocol};
 use network::capture::Capture;
+use pcap::Device;
 use pnet::packet::arp::Arp;
 use pnet::packet::dns::Dns;
 use pnet::packet::ethernet::Ethernet;
@@ -79,6 +80,7 @@ impl BronzeBatch for OpenFile {
 
 impl Bronze for Capture {
     fn to_insert_sql(&self, _foreign_id: Option<u128>) -> String {
+        let clone = self.clone();
         let row_id = Uuid::new_v4().as_u128();
         let mut request_buffer = format!(
             r#"INSERT OR REPLACE INTO memory.bronze_network_packet (
@@ -90,12 +92,12 @@ impl Bronze for Capture {
             brz_ingestion_duration
             ) VALUES ({}, '{}', {}, TO_TIMESTAMP({3}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({3})::TIMESTAMP));"#,
             row_id,
-            self.device.name,
-            self.packet.len(),
-            self.created_at
+            clone.device.name,
+            clone.packet.len(),
+            clone.created_at
         );
 
-        let clone = self.clone();
+        request_buffer.push_str(&device_addresses_to_sql(&clone.device));
 
         if clone.data_link.is_some() {
             request_buffer.push_str(&clone.data_link.unwrap().to_insert_sql(Some(row_id)))
@@ -115,6 +117,43 @@ impl Bronze for Capture {
 
         request_buffer
     }
+}
+
+fn device_addresses_to_sql(device: &Device) -> String {
+    let mut request_buffer = String::new();
+
+    for address in &device.addresses {
+        let netmask = if let Some(netmask) = address.netmask {
+            netmask.to_string()
+        } else {
+            "NULL".to_string()
+        };
+        let broadcast_address = if let Some(broadcast_address) = address.broadcast_addr {
+            broadcast_address.to_string()
+        } else {
+            "NULL".to_string()
+        };
+        let destination_address = if let Some(destination_address) = address.dst_addr {
+            destination_address.to_string()
+        } else {
+            "NULL".to_string()
+        };
+
+        request_buffer.push_str(&format!(
+            r#"INSERT OR IGNORE INTO memory.bronze_network_interface_address (
+                        interface,
+                        address,
+                        netmask,
+                        broadcast_address,
+                        destination_addrss,
+                        inserted_at
+                    )
+                    VALUES ('{}', '{}', '{}', '{}', {}, CURRENT_TIMESTAMP);"#,
+            device.name, address.addr, netmask, broadcast_address, destination_address
+        ));
+    }
+
+    request_buffer
 }
 
 impl Bronze for DataLink {

@@ -62,6 +62,18 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_packet (
 );
 "#;
 
+const BRONZE_NETWORK_INTERFACE_ADDRESS: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_interface_address (
+    interface TEXT,
+    address TEXT,
+    netmask TEXT,
+    broadcast_address TEXT,
+    destination_addrss TEXT,
+    inserted_at TIMESTAMP,
+    PRIMARY KEY (interface, address)
+);
+"#;
+
 const BRONZE_NETWORK_ETHERNET: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS {db_name}.bronze_network_ethernet_serial;
 CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_ethernet (
@@ -519,10 +531,11 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
+        BRONZE_NETWORK_INTERFACE_ADDRESS.replace("{db_name}", database),
         BRONZE_NETWORK_ETHERNET.replace("{db_name}", database),
         BRONZE_NETWORK_IPV4.replace("{db_name}", database),
         BRONZE_NETWORK_IPV6.replace("{db_name}", database),
