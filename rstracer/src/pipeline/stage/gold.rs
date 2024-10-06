@@ -1,5 +1,31 @@
-const GOLD_OPEN_FILES_REGULAR: &str = r#"
-INSERT INTO memory.gold_open_files_regular BY NAME
+const GOLD_DIM_PROCESS: &str = r#"
+INSERT OR REPLACE INTO memory.gold_dim_process BY NAME
+(
+    SELECT
+        pid,
+        ppid,
+        uid,
+        lstart,
+        command,
+        inserted_at AS updated_at
+    FROM
+    (
+        SELECT
+            pid,
+            ppid,
+            uid,
+            lstart,
+            command,
+            inserted_at,
+            row_number() OVER (PARTITION BY pid, lstart ORDER BY inserted_at DESC) AS row_num
+        FROM silver_process_list
+
+    )
+    WHERE ROW_NUM = 1
+);"#;
+
+const GOLD_DIM_OPEN_FILES_REGULAR: &str = r#"
+INSERT INTO memory.gold_dim_open_files_regular BY NAME
 (
     SELECT
         pid,
@@ -7,8 +33,6 @@ INSERT INTO memory.gold_open_files_regular BY NAME
         name,
         fd,
         node,
-        size AS min_size,
-        size AS max_size,
         created_at AS started_at,
         inserted_at AS updated_at
     FROM
@@ -24,7 +48,6 @@ INSERT INTO memory.gold_open_files_regular BY NAME
                     name,
                     fd,
                     node,
-                    size,
                     created_at,
                     inserted_at
                 FROM
@@ -33,15 +56,10 @@ INSERT INTO memory.gold_open_files_regular BY NAME
             )
         )
     WHERE row_num = 1
-)
-ON CONFLICT DO UPDATE SET
-    updated_at = EXCLUDED.updated_at,
-    min_size = LEAST(EXCLUDED.min_size, min_size),
-    max_size = GREATEST(EXCLUDED.max_size, max_size)
-;"#;
+);"#;
 
-const GOLD_OPEN_FILES_NETWORK: &str = r#"
-INSERT INTO memory.gold_open_files_network BY NAME
+const GOLD_DIM_OPEN_FILES_NETWORK: &str = r#"
+INSERT INTO memory.gold_dim_open_files_network BY NAME
 (
     SELECT
         pid,
@@ -126,7 +144,11 @@ INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
 
 pub fn request() -> String {
     format!(
-        "{} {} {} {}",
-        GOLD_OPEN_FILES_REGULAR, GOLD_OPEN_FILES_NETWORK, GOLD_NETWORK_IP, GOLD_NETWORK_FACT_IP
+        "{} {} {} {} {}",
+        GOLD_DIM_PROCESS,
+        GOLD_DIM_OPEN_FILES_REGULAR,
+        GOLD_DIM_OPEN_FILES_NETWORK,
+        GOLD_NETWORK_IP,
+        GOLD_NETWORK_FACT_IP
     )
 }

@@ -429,27 +429,39 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_arp (
 
 // GOLD
 
-const GOLD_OPEN_FILES_REGULAR: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_open_files_regular_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_regular (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_open_files_regular_serial'),
+const GOLD_DIM_PROCESS: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_process_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_process (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_process_serial'),
+    pid USMALLINT,
+    ppid USMALLINT,
+    uid USMALLINT,
+    lstart TIMESTAMP,
+    command TEXT,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (pid, lstart)
+);
+"#;
+
+const GOLD_DIM_OPEN_FILES_REGULAR: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_open_files_regular_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_open_files_regular (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_open_files_regular_serial'),
     pid USMALLINT,
     uid USMALLINT,
     name TEXT,
     fd TEXT,
     node TEXT,
-    min_size BIGINT,
-    max_size BIGINT,
     started_at TIMESTAMP,
     updated_at TIMESTAMP,
     PRIMARY KEY (pid, uid, name, fd, node)
 );
 "#;
 
-const GOLD_OPEN_FILES_NETWORK: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_open_files_network_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_network (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_open_files_network_serial'),
+const GOLD_DIM_OPEN_FILES_NETWORK: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_open_files_network_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_open_files_network (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_open_files_network_serial'),
     pid USMALLINT,
     uid USMALLINT,
     fd TEXT,
@@ -507,7 +519,7 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -531,8 +543,9 @@ fn create_tables_request(database: &str) -> String {
         SILVER_NETWORK_IP.replace("{db_name}", database),
         SILVER_NETWORK_TRANSPORT.replace("{db_name}", database),
         SILVER_NETWORK_ARP.replace("{db_name}", database),
-        GOLD_OPEN_FILES_REGULAR.replace("{db_name}", database),
-        GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
+        GOLD_DIM_PROCESS.replace("{db_name}", database),
+        GOLD_DIM_OPEN_FILES_REGULAR.replace("{db_name}", database),
+        GOLD_DIM_OPEN_FILES_NETWORK.replace("{db_name}", database),
         GOLD_NETWORK_FACT_IP.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database)
     )
