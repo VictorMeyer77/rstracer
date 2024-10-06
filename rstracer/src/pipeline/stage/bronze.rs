@@ -18,6 +18,7 @@ use pnet::packet::tcp::Tcp;
 use pnet::packet::udp::Udp;
 use pnet::packet::PrimitiveValues;
 use ps::ps::Process;
+use std::net::IpAddr;
 use uuid::Uuid;
 
 pub trait Bronze {
@@ -124,17 +125,21 @@ fn device_addresses_to_sql(device: &Device) -> String {
 
     for address in &device.addresses {
         let netmask = if let Some(netmask) = address.netmask {
-            netmask.to_string()
+            let netmask: u32 = match netmask {
+                IpAddr::V4(ipv4) => ipv4.octets().iter().map(|&octet| octet.count_ones()).sum(),
+                IpAddr::V6(ipv6) => ipv6.octets().iter().map(|&octet| octet.count_ones()).sum(),
+            };
+            format!("'/{}'", netmask)
         } else {
             "NULL".to_string()
         };
         let broadcast_address = if let Some(broadcast_address) = address.broadcast_addr {
-            broadcast_address.to_string()
+            format!("'{}'", broadcast_address)
         } else {
             "NULL".to_string()
         };
         let destination_address = if let Some(destination_address) = address.dst_addr {
-            destination_address.to_string()
+            format!("'{}'", destination_address)
         } else {
             "NULL".to_string()
         };
@@ -148,7 +153,7 @@ fn device_addresses_to_sql(device: &Device) -> String {
                         destination_addrss,
                         inserted_at
                     )
-                    VALUES ('{}', '{}', '{}', '{}', {}, CURRENT_TIMESTAMP);"#,
+                    VALUES ('{}', '{}', {}, {}, {}, CURRENT_TIMESTAMP);"#,
             device.name, address.addr, netmask, broadcast_address, destination_address
         ));
     }
