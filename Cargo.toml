@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "etc",
     "logs",
     "lsof",
     "network",
