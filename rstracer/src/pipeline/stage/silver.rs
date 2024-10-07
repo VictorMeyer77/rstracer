@@ -245,7 +245,13 @@ const SILVER_NETWORK_IP: &str = r#"
 INSERT OR IGNORE INTO memory.silver_network_ip BY NAME
 (
 SELECT
-    ip.*,
+    ip._id,
+    ip.version,
+    ip.length,
+    ip.hop_limit,
+    ip.next_protocol,
+    ip.source,
+    ip.destination,
     packet.length AS packet_length,
     packet.interface AS interface,
     packet.created_at,
@@ -260,8 +266,8 @@ FROM
         total_length AS length,
         ttl AS hop_limit,
         next_level_protocol AS next_protocol,
-        source,
-        destination
+        source::INET AS source,
+        destination::INET AS destination
     FROM memory.bronze_network_ipv4
     UNION ALL
     SELECT
