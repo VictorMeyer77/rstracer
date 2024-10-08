@@ -37,8 +37,10 @@ SELECT
     created_at,
     brz_ingestion_duration,
 
-    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN SPLIT(name, ':')[1]
-    ELSE NULL
+    CASE
+        WHEN UPPER(type) = 'IPV4' THEN SPLIT(name, ':')[1]
+        WHEN UPPER(type) = 'IPV6' THEN SPLIT(SPLIT(name, ':')[1], '.')[1]
+        ELSE NULL
     END AS ip_source_address,
 
     CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN SPLIT(SPLIT(name, ':')[2], '->')[1]
