@@ -21,7 +21,7 @@ impl EtcReader<Host> for Host {
         };
         let contents = fs::read_to_string(path)?;
         for line in contents.lines() {
-            if !line.starts_with("#") {
+            if !line.starts_with('#') {
                 let fields: Vec<&str> = line.split_whitespace().collect();
                 if fields.len() >= 2 {
                     host_buffer.push(Host {

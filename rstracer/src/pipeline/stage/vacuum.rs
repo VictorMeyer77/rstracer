@@ -1,7 +1,7 @@
 use crate::config::VacuumConfig;
 use crate::pipeline::stage::schema::Schema;
 
-pub fn vacuum_request(config: VacuumConfig, schema: Schema) -> String {
+pub fn request(config: VacuumConfig, schema: Schema) -> String {
     let mut query: String = "".to_string();
 
     for table in schema.tables {

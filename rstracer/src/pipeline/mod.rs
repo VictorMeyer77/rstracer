@@ -3,8 +3,7 @@ use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
-use crate::pipeline::stage::vacuum::vacuum_request;
-use crate::pipeline::stage::{dimension, gold, silver};
+use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
 use lsof::lsof::OpenFile;
 use network::capture::Capture;
@@ -86,7 +85,7 @@ fn get_schedule_request_task(
     tasks.insert(
         (
             "vacuum",
-            vacuum_request(config.vacuum.clone(), schema),
+            vacuum::request(config.vacuum.clone(), schema),
             config.schedule.vacuum,
         ),
         Local::now().timestamp(),
