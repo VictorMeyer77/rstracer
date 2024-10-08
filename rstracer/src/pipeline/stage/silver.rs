@@ -47,12 +47,12 @@ SELECT
 
     CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN
     	CASE WHEN REGEXP_MATCHES(name, '.*\[.*\].*') THEN REPLACE(REPLACE(REGEXP_EXTRACT(name, '\[.*\]'), '[', ''), ']', '')
-    	ELSE SPLIT(split(name, ':')[2], '->')[2]
+    	ELSE SPLIT(SPLIT(name, ':')[2], '->')[2]
     	END
     ELSE NULL
     END AS ip_destination_address,
 
-    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN SPLIT(name, ':')[3]
+    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') AND LENGTH(SPLIT(name, ':')) > 2 THEN SPLIT(name, ':')[-1]
     ELSE NULL
     END AS ip_destination_port,
 
