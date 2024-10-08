@@ -465,6 +465,15 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_services (
 );
 "#;
 
+const GOLD_DIM_HOSTS: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_hosts (
+    name TEXT,
+    address TEXT,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (name, address)
+);
+"#;
+
 // GOLD
 
 const GOLD_FACT_PROCESS: &str = r#"
@@ -558,7 +567,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {}"#,
+           {} {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -585,6 +594,7 @@ fn create_tables_request(database: &str) -> String {
         SILVER_NETWORK_TRANSPORT.replace("{db_name}", database),
         SILVER_NETWORK_ARP.replace("{db_name}", database),
         GOLD_DIM_SERVICES.replace("{db_name}", database),
+        GOLD_DIM_HOSTS.replace("{db_name}", database),
         GOLD_FACT_PROCESS.replace("{db_name}", database),
         GOLD_FACT_OPEN_FILES_REGULAR.replace("{db_name}", database),
         GOLD_FACT_OPEN_FILES_NETWORK.replace("{db_name}", database),
