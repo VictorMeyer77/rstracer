@@ -13,4 +13,6 @@ pub enum Error {
     Channel(#[from] Box<SendError<String>>),
     #[error("Join error: {0}")]
     Join(#[from] JoinError),
+    #[error("Etc error: {0}")]
+    EtcError(#[from] etc::etc::error::Error),
 }

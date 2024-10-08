@@ -17,9 +17,10 @@ silver = 60
 gold = 0
 
 [schedule]
-silver = 3
-gold = 3
+silver = 5
+gold = 5
 vacuum = 15
+dimension = 300
 
 [request]
 channel_size = 100
@@ -33,7 +34,7 @@ consumer_batch_size = 100
 [lsof]
 channel_size = 1000
 producer_frequency = 15
-consumer_batch_size = 100
+consumer_batch_size = 200
 
 [network]
 channel_size = 200

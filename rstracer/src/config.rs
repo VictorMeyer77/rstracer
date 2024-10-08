@@ -64,6 +64,7 @@ pub struct ScheduleConfig {
     pub silver: u64,
     pub gold: u64,
     pub vacuum: u64,
+    pub dimension: u64,
 }
 
 impl ScheduleConfig {
@@ -72,6 +73,7 @@ impl ScheduleConfig {
             ("silver".to_string(), self.silver),
             ("gold".to_string(), self.gold),
             ("vacuum".to_string(), self.vacuum),
+            ("dimension".to_string(), self.dimension),
         ]
     }
 }
@@ -95,6 +97,7 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("schedule.silver", 2)?
         .set_default("schedule.gold", 2)?
         .set_default("schedule.vacuum", 30)?
+        .set_default("schedule.dimension", 300)?
         // request
         .set_default("request.channel_size", 100)?
         .set_default("request.consumer_batch_size", 10)?

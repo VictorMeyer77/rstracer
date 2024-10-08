@@ -4,7 +4,7 @@ use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::vacuum::vacuum_request;
-use crate::pipeline::stage::{gold, silver};
+use crate::pipeline::stage::{dimension, gold, silver};
 use chrono::Local;
 use lsof::lsof::OpenFile;
 use network::capture::Capture;
@@ -70,11 +70,10 @@ pub async fn execute_request_task(
     Ok(())
 }
 
-pub async fn execute_schedule_request_task(
+fn get_schedule_request_task(
     config: &Config,
     schema: Schema,
-    stop_flag: Arc<AtomicBool>,
-) -> Result<(), Error> {
+) -> Result<HashMap<(&str, String, u64), i64>, Error> {
     let mut tasks: HashMap<(&str, String, u64), i64> = HashMap::new();
     tasks.insert(
         ("silver", silver::request(), config.schedule.silver),
@@ -92,7 +91,23 @@ pub async fn execute_schedule_request_task(
         ),
         Local::now().timestamp(),
     );
+    tasks.insert(
+        (
+            "dimension",
+            dimension::request()?,
+            config.schedule.dimension,
+        ),
+        0,
+    );
+    Ok(tasks)
+}
 
+pub async fn execute_schedule_request_task(
+    config: &Config,
+    schema: Schema,
+    stop_flag: Arc<AtomicBool>,
+) -> Result<(), Error> {
+    let mut tasks = get_schedule_request_task(config, schema)?;
     while !stop_flag.load(Ordering::Relaxed) {
         for (task, executed_at) in tasks.iter_mut() {
             if Local::now().timestamp() > *executed_at + task.2 as i64 {

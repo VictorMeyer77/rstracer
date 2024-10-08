@@ -453,12 +453,24 @@ CREATE TABLE IF NOT EXISTS {db_name}.silver_network_arp (
 );
 "#;
 
+// DIM
+
+const GOLD_DIM_SERVICES: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_services (
+    name TEXT,
+    port USMALLINT,
+    protocol TEXT,
+    updated_at TIMESTAMP,
+    PRIMARY KEY (name, port, protocol)
+);
+"#;
+
 // GOLD
 
-const GOLD_DIM_PROCESS: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_process_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_process (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_process_serial'),
+const GOLD_FACT_PROCESS: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_fact_process_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_process (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_fact_process_serial'),
     pid USMALLINT,
     ppid USMALLINT,
     uid USMALLINT,
@@ -469,10 +481,10 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_process (
 );
 "#;
 
-const GOLD_DIM_OPEN_FILES_REGULAR: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_open_files_regular_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_open_files_regular (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_open_files_regular_serial'),
+const GOLD_FACT_OPEN_FILES_REGULAR: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_fact_open_files_regular_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_open_files_regular (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_fact_open_files_regular_serial'),
     pid USMALLINT,
     uid USMALLINT,
     name TEXT,
@@ -484,10 +496,10 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_open_files_regular (
 );
 "#;
 
-const GOLD_DIM_OPEN_FILES_NETWORK: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_dim_open_files_network_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_open_files_network (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_dim_open_files_network_serial'),
+const GOLD_FACT_OPEN_FILES_NETWORK: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_fact_open_files_network_serial;
+CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_open_files_network (
+    _id INTEGER DEFAULT nextval('{db_name}.gold_fact_open_files_network_serial'),
     pid USMALLINT,
     uid USMALLINT,
     fd TEXT,
@@ -545,7 +557,8 @@ pub struct Column {
 
 fn create_tables_request(database: &str) -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}",
+        r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
+           {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -571,9 +584,10 @@ fn create_tables_request(database: &str) -> String {
         SILVER_NETWORK_IP.replace("{db_name}", database),
         SILVER_NETWORK_TRANSPORT.replace("{db_name}", database),
         SILVER_NETWORK_ARP.replace("{db_name}", database),
-        GOLD_DIM_PROCESS.replace("{db_name}", database),
-        GOLD_DIM_OPEN_FILES_REGULAR.replace("{db_name}", database),
-        GOLD_DIM_OPEN_FILES_NETWORK.replace("{db_name}", database),
+        GOLD_DIM_SERVICES.replace("{db_name}", database),
+        GOLD_FACT_PROCESS.replace("{db_name}", database),
+        GOLD_FACT_OPEN_FILES_REGULAR.replace("{db_name}", database),
+        GOLD_FACT_OPEN_FILES_NETWORK.replace("{db_name}", database),
         GOLD_NETWORK_FACT_IP.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database)
     )

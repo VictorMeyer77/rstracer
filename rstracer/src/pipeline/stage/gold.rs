@@ -1,5 +1,5 @@
 const GOLD_DIM_PROCESS: &str = r#"
-INSERT OR REPLACE INTO memory.gold_dim_process BY NAME
+INSERT OR REPLACE INTO memory.gold_fact_process BY NAME
 (
     SELECT
         pid,
@@ -25,7 +25,7 @@ INSERT OR REPLACE INTO memory.gold_dim_process BY NAME
 );"#;
 
 const GOLD_DIM_OPEN_FILES_REGULAR: &str = r#"
-INSERT INTO memory.gold_dim_open_files_regular BY NAME
+INSERT INTO memory.gold_fact_open_files_regular BY NAME
 (
     SELECT
         pid,
@@ -59,7 +59,7 @@ INSERT INTO memory.gold_dim_open_files_regular BY NAME
 );"#;
 
 const GOLD_DIM_OPEN_FILES_NETWORK: &str = r#"
-INSERT INTO memory.gold_dim_open_files_network BY NAME
+INSERT INTO memory.gold_fact_open_files_network BY NAME
 (
     SELECT
         pid,
