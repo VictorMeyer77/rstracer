@@ -109,9 +109,11 @@ pub async fn execute_schedule_request_task(
     let mut tasks = get_schedule_request_task(config, schema)?;
     while !stop_flag.load(Ordering::Relaxed) {
         for (task, executed_at) in tasks.iter_mut() {
-            if Local::now().timestamp() > *executed_at + task.2 as i64 {
+            let now = Local::now().timestamp();
+            if now > *executed_at + task.2 as i64 {
                 let start = Local::now().timestamp_millis();
                 execute_request(&task.1)?;
+                *executed_at = now;
                 let duration = Local::now().timestamp_millis() - start;
 
                 info!(
@@ -122,7 +124,7 @@ pub async fn execute_schedule_request_task(
             }
         }
 
-        sleep(Duration::from_millis(1000)).await;
+        sleep(Duration::from_millis(10)).await;
     }
 
     info!("consumer stop gracefully");
