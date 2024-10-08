@@ -8,9 +8,9 @@ const ROW_REGEX: &str = r"^([a-zA-Z0-9-]+)\s+(\d{1,5})\/([a-zA-Z0-9-]+)";
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Service {
-    name: String,
-    port: u16,
-    protocol: String,
+    pub name: String,
+    pub port: u16,
+    pub protocol: String,
 }
 
 impl EtcReader<Service> for Service {
@@ -47,7 +47,8 @@ mod tests {
         writeln!(
             temp_file,
             "http           80/tcp\nhttps          443/tcp\nntp            123/udp"
-        ).unwrap();
+        )
+        .unwrap();
         let services = Service::read_etc_file(temp_file.path().to_str()).unwrap();
         let expected = vec![
             Service {
