@@ -3,8 +3,8 @@ use crate::pipeline::database::{copy_layer, execute_request, get_schema};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::{create_schema_request, Schema};
 use crate::pipeline::{
-    execute_request_task, execute_schedule_request_task, network_capture_sink_task,
-    open_file_sink_task, process_task,
+    execute_request_task, execute_schedule_request_task, network_capture_sink_task, open_file_task,
+    process_task,
 };
 use network::capture::Capture;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,19 +26,13 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =
         channel(config.request.channel_size);
-    let (sender_open_file, receiver_open_file): (
-        Sender<lsof::lsof::OpenFile>,
-        Receiver<lsof::lsof::OpenFile>,
-    ) = channel(config.lsof.channel_size);
     let (sender_capture, receiver_capture): (Sender<Capture>, Receiver<Capture>) =
         channel(config.network.channel_size);
 
     let execute_schedule_request_task = start_schedule_request_task(&config, &schema, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);
     let process_task = start_process_task(&config, &sender_request, &stop_flag);
-    let open_file_source_task = start_open_file_source_task(&config, sender_open_file, &stop_flag);
-    let open_file_sink_task =
-        start_open_file_sink_task(&config, receiver_open_file, &sender_request, &stop_flag);
+    let open_file_task = start_open_file_task(&config, &sender_request, &stop_flag);
     let network_capture_source_task = start_network_capture_source_task(sender_capture, &stop_flag);
     let network_capture_sink_task =
         start_network_capture_sink_task(&config, receiver_capture, &sender_request, &stop_flag);
@@ -47,16 +41,14 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         execute_schedule_request_result,
         execute_request_result,
         process_result,
-        open_file_source_result,
-        open_file_sink_result,
+        open_file_result,
         network_capture_source_result,
         network_capture_sink_result,
     ) = join!(
         execute_schedule_request_task,
         execute_request_task,
         process_task,
-        open_file_source_task,
-        open_file_sink_task,
+        open_file_task,
         network_capture_source_task,
         network_capture_sink_task,
     );
@@ -66,8 +58,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     execute_schedule_request_result?;
     execute_request_result?;
     process_result?;
-    open_file_source_result?;
-    open_file_sink_result?;
+    open_file_result?;
     network_capture_source_result?;
     network_capture_sink_result?;
 
@@ -127,31 +118,8 @@ fn start_process_task(
     })
 }
 
-fn start_open_file_source_task(
+fn start_open_file_task(
     config: &config::Config,
-    sender_open_file: Sender<lsof::lsof::OpenFile>,
-    stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<()> {
-    let config_clone = config.lsof.clone();
-    let stop_flag_read = stop_flag.clone();
-    let stop_flag_write = stop_flag.clone();
-    tokio::spawn(async move {
-        if let Err(e) = lsof::lsof::producer(
-            sender_open_file,
-            stop_flag_read,
-            config_clone.producer_frequency.unwrap(),
-        )
-        .await
-        {
-            stop_flag_write.store(true, Ordering::Release);
-            error!("{}", e);
-        }
-    })
-}
-
-fn start_open_file_sink_task(
-    config: &config::Config,
-    receiver: Receiver<lsof::lsof::OpenFile>,
     sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
 ) -> JoinHandle<()> {
@@ -160,9 +128,7 @@ fn start_open_file_sink_task(
     let stop_flag_read = stop_flag.clone();
     let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            open_file_sink_task(&config_clone, receiver, sender_clone, stop_flag_read).await
-        {
+        if let Err(e) = open_file_task(&config_clone, sender_clone, stop_flag_read).await {
             stop_flag_write.store(true, Ordering::Release);
             error!("{}", e);
         }

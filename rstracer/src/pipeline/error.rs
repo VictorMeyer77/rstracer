@@ -15,6 +15,8 @@ pub enum Error {
     Join(#[from] JoinError),
     #[error("Ps error: {0}")]
     Ps(#[from] ps::ps::error::Error),
+    #[error("Lsof error: {0}")]
+    Lsof(#[from] lsof::lsof::error::Error),
     #[error("Etc error: {0}")]
     Etc(#[from] etc::etc::error::Error),
 }

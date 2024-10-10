@@ -5,7 +5,7 @@ use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
-use lsof::lsof::OpenFile;
+use lsof::lsof::{lsof, OpenFile};
 use network::capture::Capture;
 use ps::ps::{ps, Process};
 use std::collections::HashMap;
@@ -176,7 +176,7 @@ pub async fn process_task(
             );
         } else {
             info!(
-                "sent bronze sql request {} with processes in {} s",
+                "sent bronze sql request with {} processes in {} s",
                 length,
                 duration as f32 / 1000.0
             );
@@ -189,64 +189,60 @@ pub async fn process_task(
     Ok(())
 }
 
-pub async fn open_file_sink_task(
+pub async fn open_file_task(
     config: &ChannelConfig,
-    receiver_open_file: Receiver<OpenFile>,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let mut receiver_open_file = receiver_open_file;
+    let frequency = config.producer_frequency.unwrap();
 
     while !stop_flag.load(Ordering::Relaxed) {
-        let mut open_file_buffer: Vec<OpenFile> = Vec::with_capacity(config.consumer_batch_size);
+        let start = Local::now().timestamp_millis();
+        let open_files = lsof()?;
+        let length = open_files.len();
 
-        info!(
-            "open file receiver contains {} elements",
-            receiver_open_file.len()
-        );
+        let batches: Vec<Vec<OpenFile>> = open_files
+            .chunks(config.consumer_batch_size)
+            .map(|chunk| chunk.to_vec())
+            .collect();
 
-        match timeout(
-            Duration::from_millis(TIMEOUT_MS),
-            receiver_open_file.recv_many(&mut open_file_buffer, config.consumer_batch_size),
-        )
-        .await
-        {
-            Ok(_) => {
-                let length = open_file_buffer.len();
-                info!(
-                    "open file batch read {} / {}",
-                    length, config.consumer_batch_size
-                );
-                let start = Local::now().timestamp_millis();
-
-                let values: Vec<String> = open_file_buffer
-                    .iter()
-                    .map(|file| file.to_insert_value())
-                    .collect();
-                let request = if length == 0 {
-                    "".to_string()
-                } else {
-                    format!("{} {};", OpenFile::get_insert_header(), values.join(","))
-                };
-                if let Err(e) = sender_request.send(request).await {
-                    warn!("{}", e);
-                    stop_flag.store(true, Ordering::Release);
-                } else {
-                    let duration = Local::now().timestamp_millis() - start;
-                    info!(
-                        "sent {} open file sql in {} s",
-                        length,
-                        duration as f32 / 1000.0
-                    );
-                }
+        for batch in batches {
+            let values: Vec<String> = batch
+                .iter()
+                .map(|open_file| open_file.to_insert_value())
+                .collect();
+            let request = if values.is_empty() {
+                "".to_string()
+            } else {
+                format!("{} {};", OpenFile::get_insert_header(), values.join(","))
+            };
+            if let Err(e) = sender_request.send(request).await {
+                warn!("{}", e);
+                stop_flag.store(true, Ordering::Release);
+            } else {
+                info!("sent bronze sql request with {} open files", values.len());
             }
-            Err(_) => {
-                info!("open file timeout triggered")
-            }
+        }
+
+        let duration = Local::now().timestamp_millis() - start;
+
+        if duration > (frequency * 1000) as i64 {
+            warn!(
+                "sending rows is longer than the frequency. {} bronze open files sent in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+        } else {
+            info!(
+                "sent bronze sql request with {} open files in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
         }
     }
 
-    info!("process producer stop gracefully");
+    info!("open file producer stop gracefully");
 
     Ok(())
 }
