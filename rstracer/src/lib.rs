@@ -4,7 +4,7 @@ use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::{create_schema_request, Schema};
 use crate::pipeline::{
     execute_request_task, execute_schedule_request_task, network_capture_sink_task,
-    open_file_sink_task, process_sink_task,
+    open_file_sink_task, process_task,
 };
 use network::capture::Capture;
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -26,8 +26,6 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =
         channel(config.request.channel_size);
-    let (sender_process, receiver_process): (Sender<ps::ps::Process>, Receiver<ps::ps::Process>) =
-        channel(config.ps.channel_size);
     let (sender_open_file, receiver_open_file): (
         Sender<lsof::lsof::OpenFile>,
         Receiver<lsof::lsof::OpenFile>,
@@ -37,9 +35,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     let execute_schedule_request_task = start_schedule_request_task(&config, &schema, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);
-    let process_source_task = start_process_source_task(&config, sender_process, &stop_flag);
-    let process_sink_task =
-        start_process_sink_task(&config, receiver_process, &sender_request, &stop_flag);
+    let process_task = start_process_task(&config, &sender_request, &stop_flag);
     let open_file_source_task = start_open_file_source_task(&config, sender_open_file, &stop_flag);
     let open_file_sink_task =
         start_open_file_sink_task(&config, receiver_open_file, &sender_request, &stop_flag);
@@ -50,8 +46,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let (
         execute_schedule_request_result,
         execute_request_result,
-        process_source_result,
-        process_sink_result,
+        process_result,
         open_file_source_result,
         open_file_sink_result,
         network_capture_source_result,
@@ -59,8 +54,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     ) = join!(
         execute_schedule_request_task,
         execute_request_task,
-        process_source_task,
-        process_sink_task,
+        process_task,
         open_file_source_task,
         open_file_sink_task,
         network_capture_source_task,
@@ -71,8 +65,7 @@ pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
 
     execute_schedule_request_result?;
     execute_request_result?;
-    process_source_result?;
-    process_sink_result?;
+    process_result?;
     open_file_source_result?;
     open_file_sink_result?;
     network_capture_source_result?;
@@ -117,31 +110,8 @@ fn start_schedule_request_task(
     })
 }
 
-fn start_process_source_task(
+fn start_process_task(
     config: &config::Config,
-    sender_process: Sender<ps::ps::Process>,
-    stop_flag: &Arc<AtomicBool>,
-) -> JoinHandle<()> {
-    let config_clone = config.ps.clone();
-    let stop_flag_read = stop_flag.clone();
-    let stop_flag_write = stop_flag.clone();
-    tokio::spawn(async move {
-        if let Err(e) = ps::ps::producer(
-            sender_process,
-            stop_flag_read,
-            config_clone.producer_frequency.unwrap(),
-        )
-        .await
-        {
-            stop_flag_write.store(true, Ordering::Release);
-            error!("{}", e);
-        }
-    })
-}
-
-fn start_process_sink_task(
-    config: &config::Config,
-    receiver: Receiver<ps::ps::Process>,
     sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
 ) -> JoinHandle<()> {
@@ -150,9 +120,7 @@ fn start_process_sink_task(
     let stop_flag_read = stop_flag.clone();
     let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) =
-            process_sink_task(&config_clone, receiver, sender_clone, stop_flag_read).await
-        {
+        if let Err(e) = process_task(&config_clone, sender_clone, stop_flag_read).await {
             stop_flag_write.store(true, Ordering::Release);
             error!("{}", e);
         }

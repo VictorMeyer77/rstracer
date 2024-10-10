@@ -7,7 +7,7 @@ use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
 use lsof::lsof::OpenFile;
 use network::capture::Capture;
-use ps::ps::Process;
+use ps::ps::{ps, Process};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -131,60 +131,56 @@ pub async fn execute_schedule_request_task(
     Ok(())
 }
 
-pub async fn process_sink_task(
+pub async fn process_task(
     config: &ChannelConfig,
-    receiver_process: Receiver<Process>,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let mut receiver_process = receiver_process;
+    let frequency = config.producer_frequency.unwrap();
 
     while !stop_flag.load(Ordering::Relaxed) {
-        let mut process_buffer: Vec<Process> = Vec::with_capacity(config.consumer_batch_size);
+        let start = Local::now().timestamp_millis();
+        let processes = ps()?;
+        let length = processes.len();
 
-        info!(
-            "process receiver contains {} elements",
-            receiver_process.len()
-        );
+        let batches: Vec<Vec<Process>> = processes
+            .chunks(config.consumer_batch_size)
+            .map(|chunk| chunk.to_vec())
+            .collect();
 
-        match timeout(
-            Duration::from_millis(TIMEOUT_MS),
-            receiver_process.recv_many(&mut process_buffer, config.consumer_batch_size),
-        )
-        .await
-        {
-            Ok(_) => {
-                let length = process_buffer.len();
-                info!(
-                    "process batch read {} / {}",
-                    length, config.consumer_batch_size
-                );
-                let start = Local::now().timestamp_millis();
-
-                let values: Vec<String> = process_buffer
-                    .iter()
-                    .map(|process| process.to_insert_value())
-                    .collect();
-                let request = if length == 0 {
-                    "".to_string()
-                } else {
-                    format!("{} {};", Process::get_insert_header(), values.join(","))
-                };
-                if let Err(e) = sender_request.send(request).await {
-                    warn!("{}", e);
-                    stop_flag.store(true, Ordering::Release);
-                } else {
-                    let duration = Local::now().timestamp_millis() - start;
-                    info!(
-                        "sent {} process sql in {} s",
-                        length,
-                        duration as f32 / 1000.0
-                    );
-                }
+        for batch in batches {
+            let values: Vec<String> = batch
+                .iter()
+                .map(|process| process.to_insert_value())
+                .collect();
+            let request = if values.is_empty() {
+                "".to_string()
+            } else {
+                format!("{} {};", Process::get_insert_header(), values.join(","))
+            };
+            if let Err(e) = sender_request.send(request).await {
+                warn!("{}", e);
+                stop_flag.store(true, Ordering::Release);
+            } else {
+                info!("sent bronze sql request with {} processes", values.len());
             }
-            Err(_) => {
-                info!("process timeout triggered")
-            }
+        }
+
+        let duration = Local::now().timestamp_millis() - start;
+
+        if duration > (frequency * 1000) as i64 {
+            warn!(
+                "sending rows is longer than the frequency. {} bronze processes sent in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+        } else {
+            info!(
+                "sent bronze sql request {} with processes in {} s",
+                length,
+                duration as f32 / 1000.0
+            );
+            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
         }
     }
 
