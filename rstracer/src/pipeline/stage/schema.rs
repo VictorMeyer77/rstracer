@@ -476,17 +476,16 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_hosts (
 
 // GOLD
 
-const GOLD_FACT_PROCESS: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_fact_process_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_process (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_fact_process_serial'),
+const GOLD_PROCESS_LIST: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_process_list (
     pid USMALLINT,
     ppid USMALLINT,
     uid USMALLINT,
-    lstart TIMESTAMP,
     command TEXT,
+    silver_id BIGINT,
+    started_at TIMESTAMP,
     updated_at TIMESTAMP,
-    PRIMARY KEY (pid, lstart)
+    PRIMARY KEY (pid, started_at)
 );
 "#;
 
@@ -521,27 +520,17 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_network (
 );
 "#;
 
-const GOLD_NETWORK_FACT_IP: &str = r#"
-CREATE TABLE IF NOT EXISTS {db_name}.gold_network_fact_ip (
+const GOLD_NETWORK_IP: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
     _id UHUGEINT PRIMARY KEY,
     ip_version UTINYINT,
     transport_protocol TEXT,
-    source_address TEXT,
+    source_address INET,
     source_port TEXT,
-    destination_address TEXT,
+    destination_address INET,
     destination_port TEXT,
     created_at TIMESTAMP,
-    inserted_at TIMESTAMP
-);
-"#;
-
-const GOLD_NETWORK_IP: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS {db_name}.gold_network_ip_serial;
-CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
-    _id INTEGER DEFAULT nextval('{db_name}.gold_network_ip_serial'),
-    address TEXT PRIMARY KEY,
-    version UTINYINT,
-    last_updated TIMESTAMP
+    updated_at TIMESTAMP
 );
 "#;
 
@@ -566,7 +555,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {}"#,
+           {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -594,10 +583,9 @@ fn create_tables_request(database: &str) -> String {
         SILVER_NETWORK_ARP.replace("{db_name}", database),
         GOLD_DIM_SERVICES.replace("{db_name}", database),
         GOLD_DIM_HOSTS.replace("{db_name}", database),
-        GOLD_FACT_PROCESS.replace("{db_name}", database),
+        GOLD_PROCESS_LIST.replace("{db_name}", database),
         GOLD_OPEN_FILES_REGULAR.replace("{db_name}", database),
         GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
-        GOLD_NETWORK_FACT_IP.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database)
     )
 }

@@ -1,25 +1,20 @@
-const GOLD_DIM_PROCESS: &str = r#"
-INSERT OR REPLACE INTO memory.gold_fact_process BY NAME
+const GOLD_PROCESS_LIST: &str = r#"
+INSERT OR REPLACE INTO memory.gold_process_list BY NAME
 (
     SELECT
         pid,
         ppid,
         uid,
-        lstart,
         command,
+        _id AS silver_id,
+        lstart AS started_at,
         inserted_at AS updated_at
     FROM
     (
         SELECT
-            pid,
-            ppid,
-            uid,
-            lstart,
-            command,
-            inserted_at,
+            *,
             row_number() OVER (PARTITION BY pid, lstart ORDER BY inserted_at DESC) AS row_num
         FROM memory.silver_process_list
-
     )
     WHERE ROW_NUM = 1
 );"#;
@@ -111,8 +106,8 @@ ON CONFLICT DO UPDATE
 SET updated_at = EXCLUDED.updated_at
 ;"#;
 
-const GOLD_NETWORK_FACT_IP: &str = r#"
-INSERT OR REPLACE INTO memory.gold_network_fact_ip BY NAME
+const GOLD_NETWORK_IP: &str = r#"
+INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
 (
     SELECT
         packet._id AS _id,
@@ -123,44 +118,19 @@ INSERT OR REPLACE INTO memory.gold_network_fact_ip BY NAME
         ip.destination AS destination_address,
         transport.destination AS destination_port,
         packet.created_at,
-        packet.inserted_at
+        packet.inserted_at AS updated_at
     FROM memory.silver_network_transport transport
     INNER JOIN memory.silver_network_ip ip ON transport._id = ip._id
     INNER JOIN memory.silver_network_packet packet ON packet._id = ip._id
 );
 "#;
 
-const GOLD_NETWORK_IP: &str = r#"
-INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
-(
-    SELECT address,
-           version,
-           inserted_at AS last_updated
-    FROM
-        (
-            SELECT
-            *,
-            row_number() OVER (PARTITION BY address ORDER BY inserted_at DESC) AS row_num
-            FROM
-            (
-                SELECT source AS address, version, inserted_at
-                FROM memory.silver_network_ip
-                UNION ALL
-                SELECT destination AS address, version, inserted_at
-                FROM memory.silver_network_ip
-            )
-        )
-    WHERE row_num = 1
-);
-"#;
-
 pub fn request() -> String {
     format!(
-        "{} {} {} {} {}",
-        GOLD_DIM_PROCESS,
+        "{} {} {} {}",
+        GOLD_PROCESS_LIST,
         GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,
-        GOLD_NETWORK_IP,
-        GOLD_NETWORK_FACT_IP
+        GOLD_NETWORK_IP
     )
 }
