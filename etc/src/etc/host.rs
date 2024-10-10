@@ -118,7 +118,7 @@ mod tests {
         let result = get_host_row();
         assert!(result.is_ok());
         let host = result.unwrap();
-        assert!(host.name.len() > 0);
-        assert!(host.address.len() > 0);
+        assert!(!host.name.is_empty());
+        assert!(!host.address.is_empty());
     }
 }
