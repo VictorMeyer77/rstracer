@@ -534,6 +534,24 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
 );
 "#;
 
+const GOLD_FACT_PROCESS_NETWORK: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_process_network (
+    _id UBIGINT PRIMARY KEY,
+	pid USMALLINT,
+	uid USMALLINT,
+	command TEXT,
+	source_address INET,
+	source_port USMALLINT,
+	destination_address INET,
+	destination_port USMALLINT,
+	is_source BOOL,
+	process_svr_id INTEGER,
+	open_file_svr_id INTEGER,
+	packet_id UHUGEINT,
+    created_at TIMESTAMP
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -555,7 +573,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {}"#,
+           {} {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -586,7 +604,8 @@ fn create_tables_request(database: &str) -> String {
         GOLD_PROCESS_LIST.replace("{db_name}", database),
         GOLD_OPEN_FILES_REGULAR.replace("{db_name}", database),
         GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
-        GOLD_NETWORK_IP.replace("{db_name}", database)
+        GOLD_NETWORK_IP.replace("{db_name}", database),
+        GOLD_FACT_PROCESS_NETWORK.replace("{db_name}", database)
     )
 }
 

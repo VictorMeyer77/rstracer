@@ -125,12 +125,73 @@ INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
 );
 "#;
 
+const GOLD_FACT_PROCESS_NETWORK: &str = r#"
+INSERT OR REPLACE INTO memory.gold_fact_process_network BY NAME
+(
+    SELECT DISTINCT
+        HASH(pro.silver_id, ofn.silver_id, net._id) AS _id,
+        pro.pid,
+        pro.uid,
+        ofn.command,
+        net.source_address,
+        net.source_port,
+        net.destination_address,
+        net.destination_port,
+        net.is_source,
+        pro.silver_id AS process_svr_id,
+        ofn.silver_id AS open_file_svr_id,
+        net._id AS packet_id,
+        CURRENT_TIMESTAMP AS created_at,
+    FROM memory.gold_process_list pro
+    INNER JOIN memory.gold_open_files_network ofn
+    ON pro.pid = ofn.pid
+    AND ofn.started_at > pro.started_at
+    AND ofn.started_at < pro.updated_at
+    LEFT JOIN (
+        SELECT
+            _id,
+            ip_version,
+            transport_protocol,
+            source_address,
+            source_port,
+            destination_address,
+            destination_port,
+            created_at,
+            updated_at,
+            source_address AS address_key,
+            source_port AS port_key,
+            TRUE AS is_source,
+        FROM memory.gold_network_ip
+        UNION
+        SELECT
+            _id,
+            ip_version,
+            transport_protocol,
+            source_address,
+            source_port,
+            destination_address,
+            destination_port,
+            created_at,
+            updated_at,
+            destination_address AS address_key,
+            destination_port AS port_key,
+            FALSE AS is_source,
+        FROM memory.gold_network_ip
+    ) net
+    ON host(net.address_key) = host(ofn.source_address)
+    AND net.port_key = ofn.source_port
+    AND net.created_at > ofn.started_at
+    AND net.created_at < ofn.updated_at
+)
+"#;
+
 pub fn request() -> String {
     format!(
-        "{} {} {} {}",
+        "{} {} {} {} {}",
         GOLD_PROCESS_LIST,
         GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,
-        GOLD_NETWORK_IP
+        GOLD_NETWORK_IP,
+        GOLD_FACT_PROCESS_NETWORK
     )
 }
