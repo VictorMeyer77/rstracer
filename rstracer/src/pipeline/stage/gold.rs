@@ -24,8 +24,8 @@ INSERT OR REPLACE INTO memory.gold_fact_process BY NAME
     WHERE ROW_NUM = 1
 );"#;
 
-const GOLD_DIM_OPEN_FILES_REGULAR: &str = r#"
-INSERT INTO memory.gold_fact_open_files_regular BY NAME
+const GOLD_OPEN_FILES_REGULAR: &str = r#"
+INSERT INTO memory.gold_open_files_regular BY NAME
 (
     SELECT
         pid,
@@ -33,68 +33,70 @@ INSERT INTO memory.gold_fact_open_files_regular BY NAME
         name,
         fd,
         node,
+        command,
+        _id AS silver_id,
         created_at AS started_at,
-        inserted_at AS updated_at
+        created_at AS updated_at
     FROM
         (
-        SELECT
-            *,
-            row_number() OVER (PARTITION BY pid, uid, name, fd, node ORDER BY inserted_at DESC) AS row_num
-        FROM
-            (
-                SELECT
-                    pid,
-                    uid,
-                    name,
-                    fd,
-                    node,
-                    created_at,
-                    inserted_at
-                FROM
-                    memory.silver_open_files
-                WHERE UPPER(type) NOT IN ('IPV4', 'IPV6')
-            )
+            SELECT
+                *,
+                ROW_NUMBER() OVER (PARTITION BY pid, fd, node ORDER BY created_at DESC) AS row_num
+            FROM
+                memory.silver_open_files
+            WHERE UPPER(type) NOT IN ('IPV4', 'IPV6')
         )
     WHERE row_num = 1
-);"#;
+)
+ON CONFLICT DO UPDATE
+SET updated_at = EXCLUDED.updated_at
+;"#;
 
 const GOLD_OPEN_FILES_NETWORK: &str = r#"
 INSERT INTO memory.gold_open_files_network BY NAME
 (
     SELECT DISTINCT
-        command,
+        HASH(pid, fd, source_address, source_port, destination_address, destination_port) AS _id,
         pid,
         uid,
-        fd,
-        type,
+        command,
         source_address::INET AS source_address,
         source_port,
         destination_address,
         destination_port,
-        started_at,
-        updated_at
+        silver_id,
+        created_at AS started_at,
+        created_at AS updated_at
     FROM
     (
         SELECT
-            ofn.command,
             ofn.pid,
             ofn.uid,
             ofn.fd,
-            ofn.type,
+            ofn.command,
             CASE
                 WHEN ofn.ip_source_address = '*' THEN NULL
                 ELSE REPLACE(COALESCE(hos1.address, ofn.ip_source_address), '-', ':')
             END AS source_address,
-            COALESCE(ser1.port::TEXT, ofn.ip_source_port) AS source_port,
-            COALESCE(hos2.address, ofn.ip_destination_address) AS destination_address,
-            COALESCE(ser2.port::TEXT, ofn.ip_destination_port) AS destination_port,
-            ofn.created_at AS started_at,
-            ofn.inserted_at AS updated_at
+            CASE
+                WHEN ofn.ip_source_port IN ('*', '') THEN NULL
+                ELSE COALESCE(ser1.port::TEXT, ofn.ip_source_port)
+            END AS source_port,
+            CASE
+                WHEN ofn.ip_destination_address = '*' THEN NULL
+                ELSE COALESCE(hos2.address, ofn.ip_destination_address)
+            END AS destination_address,
+            CASE
+                WHEN ofn.ip_destination_port IN ('*', '') THEN NULL
+                ELSE COALESCE(ser2.port::TEXT, ofn.ip_destination_port)
+            END AS destination_port,
+            ofn.created_at,
+            ofn._id AS silver_id
         FROM
         (
             SELECT
                 *,
-                ROW_NUMBER() OVER (PARTITION BY pid, uid, fd, ip_source_address, ip_source_port, created_at ORDER BY inserted_at DESC) AS row_num
+                ROW_NUMBER() OVER (PARTITION BY pid, fd, ip_source_address, ip_source_port, ip_destination_address, ip_destination_port ORDER BY created_at DESC) AS row_num
             FROM memory.silver_open_files
             WHERE UPPER(type) IN ('IPV4', 'IPV6')
         ) ofn
@@ -103,12 +105,6 @@ INSERT INTO memory.gold_open_files_network BY NAME
         LEFT JOIN memory.gold_dim_services ser1 ON LOWER(ofn.ip_source_port) = LOWER(ser1.name)
         LEFT JOIN memory.gold_dim_services ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
         WHERE ofn.row_num = 1
-    )
-    WHERE
-    (
-        (source_address NOT LIKE '%:%' AND UPPER(type) = 'IPV4')
-         OR
-        (source_address NOT LIKE '%.%' AND UPPER(type) = 'IPV6')
     )
 )
 ON CONFLICT DO UPDATE
@@ -162,7 +158,7 @@ pub fn request() -> String {
     format!(
         "{} {} {} {} {}",
         GOLD_DIM_PROCESS,
-        GOLD_DIM_OPEN_FILES_REGULAR,
+        GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,
         GOLD_NETWORK_IP,
         GOLD_NETWORK_FACT_IP

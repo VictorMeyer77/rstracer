@@ -36,31 +36,27 @@ SELECT
     name,
     created_at,
     brz_ingestion_duration,
-
     CASE
-        WHEN UPPER(type) = 'IPV4' THEN SPLIT(name, ':')[1]
-        WHEN UPPER(type) = 'IPV6' THEN SPLIT(SPLIT(name, ':')[1], '.')[1]
-        ELSE NULL
+        WHEN REGEXP_MATCHES(ip_source_address, '[:\-]') THEN REGEXP_REPLACE(SPLIT_PART(ip_source_address, '.', 1), '[\[\]]', '', 'g')
+        ELSE ip_source_address
     END AS ip_source_address,
-
-    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN SPLIT(SPLIT(name, ':')[2], '->')[1]
-    ELSE NULL
-    END AS ip_source_port,
-
-    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') THEN
-    	CASE WHEN REGEXP_MATCHES(name, '.*\[.*\].*') THEN REPLACE(REPLACE(REGEXP_EXTRACT(name, '\[.*\]'), '[', ''), ']', '')
-    	ELSE SPLIT(SPLIT(name, ':')[2], '->')[2]
-    	END
-    ELSE NULL
-    END AS ip_destination_address,
-
-    CASE WHEN UPPER(type) IN ('IPV4', 'IPV6') AND LENGTH(SPLIT(name, ':')) > 2 THEN SPLIT(name, ':')[-1]
-    ELSE NULL
-    END AS ip_destination_port,
-
-    CURRENT_TIMESTAMP AS inserted_at,
-    AGE(inserted_at) AS svr_ingestion_duration
-FROM memory.bronze_open_files
+    ip_source_port,
+    REGEXP_REPLACE(ip_destination_address, '[\[\]]', '', 'g') AS ip_destination_address,
+    ip_destination_port,
+    inserted_at,
+    svr_ingestion_duration
+FROM
+    (
+    SELECT
+        *,
+        REGEXP_EXTRACT(SPLIT_PART(name, '->', 1), '^([a-zA-Z0-9\-\.\*\:\[\]]+):([a-zA-Z0-9\-\.\*\:\[\]]+)$', 1) AS ip_source_address,
+        REGEXP_EXTRACT(SPLIT_PART(name, '->', 1), '^([a-zA-Z0-9\-\.\*\:\[\]]+):([a-zA-Z0-9\-\.\*\:\[\]]+)$', 2) AS ip_source_port,
+        REGEXP_EXTRACT(SPLIT_PART(name, '->', 2), '^([a-zA-Z0-9\-\.\*\:\[\]]+):([a-zA-Z0-9\-\.\*\:\[\]]+)$', 1) AS ip_destination_address,
+        REGEXP_EXTRACT(SPLIT_PART(name, '->', 2), '^([a-zA-Z0-9\-\.\*\:\[\]]+):([a-zA-Z0-9\-\.\*\:\[\]]+)$', 2) AS ip_destination_port,
+        CURRENT_TIMESTAMP AS inserted_at,
+        AGE(inserted_at) AS svr_ingestion_duration
+    FROM memory.bronze_open_files
+    )
 );
 "#;
 
