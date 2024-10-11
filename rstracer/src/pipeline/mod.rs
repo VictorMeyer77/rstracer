@@ -1,7 +1,7 @@
 use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
-use crate::pipeline::stage::bronze::{Bronze, BronzeBatch};
+use crate::pipeline::stage::bronze::{concat_requests, Bronze, BronzeBatch};
 use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
@@ -161,8 +161,6 @@ pub async fn process_task(
             if let Err(e) = sender_request.send(request).await {
                 warn!("{}", e);
                 stop_flag.store(true, Ordering::Release);
-            } else {
-                info!("sent bronze sql request with {} processes", values.len());
             }
         }
 
@@ -219,8 +217,6 @@ pub async fn open_file_task(
             if let Err(e) = sender_request.send(request).await {
                 warn!("{}", e);
                 stop_flag.store(true, Ordering::Release);
-            } else {
-                info!("sent bronze sql request with {} open files", values.len());
             }
         }
 
@@ -282,11 +278,7 @@ pub async fn network_capture_sink_task(
                     .map(|file| file.to_insert_sql(None))
                     .collect();
 
-                let request = if length == 0 {
-                    "".to_string()
-                } else {
-                    values.join("")
-                };
+                let request = concat_requests(values, config.consumer_batch_size).join(";");
 
                 if let Err(e) = sender_request.send(request).await {
                     warn!("{}", e);
@@ -305,7 +297,7 @@ pub async fn network_capture_sink_task(
             }
         }
 
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_secs(config.producer_frequency.unwrap())).await;
     }
 
     Ok(())

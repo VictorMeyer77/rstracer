@@ -18,6 +18,7 @@ use pnet::packet::tcp::Tcp;
 use pnet::packet::udp::Udp;
 use pnet::packet::PrimitiveValues;
 use ps::ps::Process;
+use std::collections::HashMap;
 use std::net::IpAddr;
 use uuid::Uuid;
 
@@ -29,6 +30,37 @@ pub trait BronzeBatch {
     fn get_insert_header() -> String;
 
     fn to_insert_value(&self) -> String;
+}
+
+pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> {
+    let mut request_buffer: Vec<String> = vec![];
+
+    let request_unique: Vec<&str> = requests
+        .iter()
+        .flat_map(|request| request.split(';'))
+        .filter(|s| !s.trim().is_empty())
+        .collect();
+
+    let mut reduced: HashMap<&str, Vec<&str>> = HashMap::new();
+    for request in request_unique {
+        let mut parts = request.splitn(2, "VALUES");
+        if let (Some(prefix), Some(values)) = (parts.next(), parts.next()) {
+            reduced
+                .entry(prefix.trim())
+                .or_default()
+                .push(values.trim());
+        }
+    }
+
+    for (key, mut values) in reduced {
+        values.sort();
+        values.dedup();
+        for chunk in values.chunks(batch_size) {
+            request_buffer.push(format!("{} VALUES {};", key, chunk.join(",")));
+        }
+    }
+
+    request_buffer
 }
 
 impl BronzeBatch for Process {
@@ -595,4 +627,120 @@ fn bronze_tls(tls: Tls, packet_id: u128) -> String {
         u16::from(tls.version),
         tls.length,
     )
+}
+
+#[cfg(test)]
+mod tests {
+
+    use super::*;
+
+    #[test]
+    fn test_concat_requests_with_empty_requests() {
+        let requests: Vec<String> = vec![];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected: Vec<String> = vec![];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_single_request() {
+        let requests = vec!["INSERT INTO table1 VALUES (1, 'A');".to_string()];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A');".to_string()];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_multiple_requests_no_dedup() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+            "INSERT INTO table1 VALUES (2, 'B');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_multiple_requests_with_dedup() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+            "INSERT INTO table1 VALUES (2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_multiple_requests_with_dedup_and_batching() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+            "INSERT INTO table1 VALUES (2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (3, 'C');".to_string(),
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec![
+            "INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (3, 'C');".to_string(),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_multiple_tables() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+            "INSERT INTO table2 VALUES (2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (3, 'C');".to_string(),
+            "INSERT INTO table2 VALUES (4, 'D');".to_string(),
+        ];
+        let batch_size = 2;
+        let mut result = concat_requests(requests, batch_size);
+        let mut expected = vec![
+            "INSERT INTO table1 VALUES (1, 'A'),(3, 'C');".to_string(),
+            "INSERT INTO table2 VALUES (2, 'B'),(4, 'D');".to_string(),
+        ];
+        result.sort();
+        expected.sort();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_batching_large_input() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A');".to_string(),
+            "INSERT INTO table1 VALUES (2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (3, 'C');".to_string(),
+            "INSERT INTO table1 VALUES (4, 'D');".to_string(),
+            "INSERT INTO table1 VALUES (5, 'E');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec![
+            "INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string(),
+            "INSERT INTO table1 VALUES (3, 'C'),(4, 'D');".to_string(),
+            "INSERT INTO table1 VALUES (5, 'E');".to_string(),
+        ];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_requests_with_whitespace() {
+        let requests = vec![
+            " INSERT INTO table1 VALUES (1, 'A');  ".to_string(),
+            "  INSERT INTO table1 VALUES (2, 'B');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
+        assert_eq!(result, expected);
+    }
 }
