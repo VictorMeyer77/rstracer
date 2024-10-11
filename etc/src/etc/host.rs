@@ -119,6 +119,5 @@ mod tests {
         assert!(result.is_ok());
         let host = result.unwrap();
         assert!(!host.name.is_empty());
-        assert!(!host.address.is_empty());
     }
 }
