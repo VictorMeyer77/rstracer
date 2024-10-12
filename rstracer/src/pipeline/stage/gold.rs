@@ -1,11 +1,17 @@
 const GOLD_PROCESS_LIST: &str = r#"
-INSERT OR REPLACE INTO memory.gold_process_list BY NAME
+INSERT INTO memory.gold_process_list BY NAME
 (
     SELECT
         pid,
         ppid,
         uid,
         command,
+        MIN(pcpu) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS min_pcpu,
+        MAX(pcpu) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS max_pcpu,
+        pcpu AS last_pcpu,
+        MIN(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS min_pmem,
+        MAX(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS max_pmem,
+        pmem AS last_pmem,
         _id AS silver_id,
         lstart AS started_at,
         inserted_at AS updated_at
@@ -17,7 +23,16 @@ INSERT OR REPLACE INTO memory.gold_process_list BY NAME
         FROM memory.silver_process_list
     )
     WHERE ROW_NUM = 1
-);"#;
+)
+ON CONFLICT DO UPDATE SET
+    updated_at = EXCLUDED.updated_at,
+    last_pcpu = EXCLUDED.last_pcpu,
+    min_pcpu = LEAST(min_pcpu, EXCLUDED.min_pcpu),
+    max_pcpu = GREATEST(max_pcpu, EXCLUDED.max_pcpu),
+    last_pmem = EXCLUDED.last_pmem,
+    min_pmem = LEAST(min_pmem, EXCLUDED.min_pmem),
+    max_pmem = GREATEST(max_pmem, EXCLUDED.max_pmem)
+;"#;
 
 const GOLD_OPEN_FILES_REGULAR: &str = r#"
 INSERT INTO memory.gold_open_files_regular BY NAME
@@ -29,6 +44,9 @@ INSERT INTO memory.gold_open_files_regular BY NAME
         fd,
         node,
         command,
+        MIN(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS min_size,
+        MAX(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS max_size,
+        SIZE AS last_size,
         _id AS silver_id,
         created_at AS started_at,
         created_at AS updated_at
@@ -43,12 +61,15 @@ INSERT INTO memory.gold_open_files_regular BY NAME
         )
     WHERE row_num = 1
 )
-ON CONFLICT DO UPDATE
-SET updated_at = EXCLUDED.updated_at
+ON CONFLICT DO UPDATE SET
+    updated_at = EXCLUDED.updated_at,
+    last_size = EXCLUDED.last_size,
+    min_size = LEAST(min_size, EXCLUDED.min_size),
+    max_size = GREATEST(max_size, EXCLUDED.max_size)
 ;"#;
 
 const GOLD_OPEN_FILES_NETWORK: &str = r#"
-INSERT INTO memory.gold_open_files_network BY NAME
+INSERT OR REPLACE INTO memory.gold_open_files_network BY NAME
 (
     SELECT DISTINCT
         HASH(pid, fd, source_address, source_port, destination_address, destination_port) AS _id,
@@ -101,10 +122,7 @@ INSERT INTO memory.gold_open_files_network BY NAME
         LEFT JOIN memory.gold_dim_services ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
         WHERE ofn.row_num = 1
     )
-)
-ON CONFLICT DO UPDATE
-SET updated_at = EXCLUDED.updated_at
-;"#;
+);"#;
 
 const GOLD_NETWORK_IP: &str = r#"
 INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
