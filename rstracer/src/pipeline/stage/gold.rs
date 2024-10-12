@@ -182,16 +182,30 @@ INSERT OR REPLACE INTO memory.gold_fact_process_network BY NAME
     AND net.port_key = ofn.source_port
     AND net.created_at > ofn.started_at
     AND net.created_at < ofn.updated_at
-)
+);
+"#;
+
+const GOLD_PROCESS_COMMAND: &str = r#"
+INSERT OR REPLACE INTO memory.gold_process_command BY NAME
+(
+    SELECT DISTINCT
+        pro.pid,
+        pro.ppid,
+        ofn.command,
+        CURRENT_TIMESTAMP AS updated_at
+    FROM memory.silver_process_list pro
+    LEFT JOIN memory.silver_open_files ofn ON pro.pid = ofn.pid
+);
 "#;
 
 pub fn request() -> String {
     format!(
-        "{} {} {} {} {}",
+        "{} {} {} {} {} {}",
         GOLD_PROCESS_LIST,
         GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,
         GOLD_NETWORK_IP,
-        GOLD_FACT_PROCESS_NETWORK
+        GOLD_FACT_PROCESS_NETWORK,
+        GOLD_PROCESS_COMMAND,
     )
 }

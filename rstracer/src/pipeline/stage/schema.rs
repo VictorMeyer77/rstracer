@@ -552,6 +552,15 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_process_network (
 );
 "#;
 
+const GOLD_PROCESS_COMMAND: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_process_command (
+	pid USMALLINT PRIMARY KEY,
+	ppid USMALLINT,
+	command TEXT,
+	updated_at TIMESTAMP
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -573,7 +582,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {}"#,
+           {} {} {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -605,7 +614,8 @@ fn create_tables_request(database: &str) -> String {
         GOLD_OPEN_FILES_REGULAR.replace("{db_name}", database),
         GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database),
-        GOLD_FACT_PROCESS_NETWORK.replace("{db_name}", database)
+        GOLD_FACT_PROCESS_NETWORK.replace("{db_name}", database),
+        GOLD_PROCESS_COMMAND.replace("{db_name}", database)
     )
 }
 
