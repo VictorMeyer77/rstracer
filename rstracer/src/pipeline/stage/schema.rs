@@ -584,6 +584,30 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_process_command (
 );
 "#;
 
+const GOLD_TECH_TABLE_COUNT: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_tech_table_count (
+	_id USMALLINT PRIMARY KEY,
+	name TEXT,
+	min_count BIGINT,
+	max_count BIGINT,
+	last_count BIGINT,
+	updated_at TIMESTAMP
+);
+"#;
+
+const GOLD_TECH_CHRONO: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_tech_chrono (
+	name TEXT PRIMARY KEY,
+	brz_max_ingest FLOAT,
+	brz_min_ingest FLOAT,
+	svr_max_ingest FLOAT,
+	svr_min_ingest FLOAT,
+	max_ingest FLOAT,
+	min_ingest FLOAT,
+	updated_at TIMESTAMP
+);
+"#;
+
 #[derive(Debug, Clone)]
 pub struct Schema {
     pub tables: Vec<Table>,
@@ -605,7 +629,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {} {} {}"#,
+           {} {} {} {} {} {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -639,7 +663,9 @@ fn create_tables_request(database: &str) -> String {
         GOLD_NETWORK_PACKET.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database),
         GOLD_PROCESS_NETWORK.replace("{db_name}", database),
-        GOLD_PROCESS_COMMAND.replace("{db_name}", database)
+        GOLD_PROCESS_COMMAND.replace("{db_name}", database),
+        GOLD_TECH_TABLE_COUNT.replace("{db_name}", database),
+        GOLD_TECH_CHRONO.replace("{db_name}", database)
     )
 }
 
