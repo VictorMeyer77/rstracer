@@ -71,25 +71,25 @@ INSERT OR IGNORE INTO memory.silver_network_packet BY NAME
         packet.brz_ingestion_duration,
         CASE
             WHEN ethernet._id IS NOT NULL THEN 'ethernet'
-            ELSE 'unknown'
+            ELSE NULL
         END AS data_link,
         CASE
             WHEN ipv4._id IS NOT NULL THEN 'ipv4'
             WHEN ipv6._id IS NOT NULL THEN 'ipv6'
             WHEN arp._id IS NOT NULL THEN 'arp'
-            ELSE 'unknown'
+            ELSE NULL
         END AS network,
         CASE
             WHEN tcp._id IS NOT NULL THEN 'tcp'
             WHEN udp._id IS NOT NULL THEN 'udp'
             WHEN icmp._id IS NOT NULL THEN 'icmp'
-            ELSE 'unknown'
+            ELSE NULL
         END AS transport,
         CASE
             WHEN dns._id IS NOT NULL THEN 'dns'
             WHEN tls._id IS NOT NULL THEN 'tls'
             WHEN http._id IS NOT NULL THEN 'http'
-            ELSE 'unknown'
+            ELSE NULL
         END AS application,
         CURRENT_TIMESTAMP AS inserted_at,
         AGE(packet.inserted_at) AS svr_ingestion_duration

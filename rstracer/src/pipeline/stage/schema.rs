@@ -277,20 +277,20 @@ CREATE TABLE IF NOT EXISTS {db_name}.bronze_network_http (
 
 const SILVER_PROCESS_LIST: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.silver_process_list (
-    _id INTEGER PRIMARY KEY,                                                    -- Primary Key
-    pid INTEGER,                                                             -- Foreign Key for Process ID
-    ppid INTEGER,                                                            -- Foreign Key for Parent Process ID
-    uid INTEGER,                                                             -- Foreign Key for User ID
-    lstart TIMESTAMP,                                                        -- Timestamp for process start time
-    pcpu FLOAT,                                                              -- Percentage of CPU usage
-    pmem FLOAT,                                                              -- Percentage of Memory usage
-    status TEXT,                                                          -- Status of the process
-    command TEXT,                                                         -- Command that initiated the process
-    created_at TIMESTAMP,                                                    -- Timestamp of evenement
+    _id INTEGER PRIMARY KEY,
+    pid INTEGER,
+    ppid INTEGER,
+    uid INTEGER,
+    lstart TIMESTAMP,
+    pcpu FLOAT,
+    pmem FLOAT,
+    status TEXT,
+    command TEXT,
+    created_at TIMESTAMP,
     brz_ingestion_duration INTERVAL,
-    duration INTERVAL,                                                -- Duration of the process
-    inserted_at TIMESTAMP,                                              -- Timestamp of record insertion
-    svr_ingestion_duration INTERVAL                                     -- Duration between the insertion in bronze and insertion in silver
+    duration INTERVAL,
+    inserted_at TIMESTAMP,
+    svr_ingestion_duration INTERVAL
 );
 "#;
 
@@ -529,6 +529,20 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_network (
 );
 "#;
 
+const GOLD_NETWORK_PACKET: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_network_packet (
+    _id UHUGEINT PRIMARY KEY,
+    interface TEXT,
+    length UINTEGER,
+    created_at TIMESTAMP,
+    data_link TEXT,
+    network TEXT,
+    transport TEXT,
+    application TEXT,
+    updated_at TIMESTAMP
+);
+"#;
+
 const GOLD_NETWORK_IP: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
     _id UHUGEINT PRIMARY KEY,
@@ -543,8 +557,8 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
 );
 "#;
 
-const GOLD_FACT_PROCESS_NETWORK: &str = r#"
-CREATE TABLE IF NOT EXISTS {db_name}.gold_fact_process_network (
+const GOLD_PROCESS_NETWORK: &str = r#"
+CREATE TABLE IF NOT EXISTS {db_name}.gold_process_network (
     _id UBIGINT PRIMARY KEY,
 	pid USMALLINT,
 	uid USMALLINT,
@@ -591,7 +605,7 @@ pub struct Column {
 fn create_tables_request(database: &str) -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {} {}"#,
+           {} {} {} {} {}"#,
         BRONZE_PROCESS_LIST.replace("{db_name}", database),
         BRONZE_OPEN_FILES.replace("{db_name}", database),
         BRONZE_NETWORK_PACKET.replace("{db_name}", database),
@@ -622,8 +636,9 @@ fn create_tables_request(database: &str) -> String {
         GOLD_PROCESS_LIST.replace("{db_name}", database),
         GOLD_OPEN_FILES_REGULAR.replace("{db_name}", database),
         GOLD_OPEN_FILES_NETWORK.replace("{db_name}", database),
+        GOLD_NETWORK_PACKET.replace("{db_name}", database),
         GOLD_NETWORK_IP.replace("{db_name}", database),
-        GOLD_FACT_PROCESS_NETWORK.replace("{db_name}", database),
+        GOLD_PROCESS_NETWORK.replace("{db_name}", database),
         GOLD_PROCESS_COMMAND.replace("{db_name}", database)
     )
 }

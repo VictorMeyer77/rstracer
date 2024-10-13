@@ -124,6 +124,23 @@ INSERT OR REPLACE INTO memory.gold_open_files_network BY NAME
     )
 );"#;
 
+const GOLD_NETWORK_PACKET: &str = r#"
+INSERT OR REPLACE INTO memory.gold_network_packet BY NAME
+(
+    SELECT
+        _id,
+        interface,
+        length,
+        data_link,
+        network,
+        transport,
+        application,
+        created_at,
+        CURRENT_TIMESTAMP AS updated_at
+    FROM memory.silver_network_packet
+);
+"#;
+
 const GOLD_NETWORK_IP: &str = r#"
 INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
 (
@@ -143,8 +160,8 @@ INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
 );
 "#;
 
-const GOLD_FACT_PROCESS_NETWORK: &str = r#"
-INSERT OR REPLACE INTO memory.gold_fact_process_network BY NAME
+const GOLD_PROCESS_NETWORK: &str = r#"
+INSERT OR REPLACE INTO memory.gold_process_network BY NAME
 (
     SELECT DISTINCT
         HASH(pro.silver_id, ofn.silver_id, net._id) AS _id,
@@ -218,12 +235,13 @@ INSERT OR REPLACE INTO memory.gold_process_command BY NAME
 
 pub fn request() -> String {
     format!(
-        "{} {} {} {} {} {}",
+        "{} {} {} {} {} {} {}",
         GOLD_PROCESS_LIST,
         GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,
+        GOLD_NETWORK_PACKET,
         GOLD_NETWORK_IP,
-        GOLD_FACT_PROCESS_NETWORK,
+        GOLD_PROCESS_NETWORK,
         GOLD_PROCESS_COMMAND,
     )
 }
