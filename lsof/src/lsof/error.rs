@@ -1,8 +1,6 @@
-use crate::lsof::OpenFile;
 use std::io;
 use std::num;
 use thiserror::Error;
-use tokio::sync::mpsc::error::SendError;
 
 #[derive(Error, Debug)]
 pub enum Error {
@@ -14,6 +12,4 @@ pub enum Error {
     ParseFloat(#[from] num::ParseFloatError),
     #[error("IO error: {0}")]
     IO(#[from] io::Error),
-    #[error("Channel error: {0}")]
-    Channel(#[from] Box<SendError<OpenFile>>),
 }
