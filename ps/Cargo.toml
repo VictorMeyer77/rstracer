@@ -6,3 +6,6 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.38"
 thiserror = "1.0.63"
+
+[[example]]
+name = "list_process"

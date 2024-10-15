@@ -9,11 +9,11 @@ gold = true
 [load_layer]
 bronze = false
 silver = false
-gold = true
+gold = false
 
 [vacuum]
-bronze = 60
-silver = 60
+bronze = 15
+silver = 15
 gold = 0
 
 [schedule]
@@ -24,12 +24,12 @@ dimension = 300
 
 [request]
 channel_size = 100
-consumer_batch_size = 10
+consumer_batch_size = 20
 
 [ps]
 channel_size = 500
 producer_frequency = 3
-consumer_batch_size = 100
+consumer_batch_size = 200
 
 [lsof]
 channel_size = 1000
@@ -37,5 +37,6 @@ producer_frequency = 15
 consumer_batch_size = 200
 
 [network]
-channel_size = 200
-consumer_batch_size = 25
+channel_size = 500
+producer_frequency = 1
+consumer_batch_size = 200

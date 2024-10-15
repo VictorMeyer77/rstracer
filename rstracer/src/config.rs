@@ -80,7 +80,7 @@ impl ScheduleConfig {
 
 pub fn read_config() -> Result<Config, Error> {
     let mut config = config::Config::builder()
-        .set_default("disk_file_path", "/tmp/rstracer.db")?
+        .set_default("disk_file_path", "rstracer.db")?
         // persist_layer
         .set_default("persist_layer.bronze", true)?
         .set_default("persist_layer.silver", true)?
@@ -88,30 +88,31 @@ pub fn read_config() -> Result<Config, Error> {
         // load_layer
         .set_default("load_layer.bronze", false)?
         .set_default("load_layer.silver", false)?
-        .set_default("load_layer.gold", true)?
+        .set_default("load_layer.gold", false)?
         // vacuum
-        .set_default("vacuum.bronze", 30)?
-        .set_default("vacuum.silver", 30)?
+        .set_default("vacuum.bronze", 15)?
+        .set_default("vacuum.silver", 15)?
         .set_default("vacuum.gold", 0)?
         // schedule
-        .set_default("schedule.silver", 2)?
-        .set_default("schedule.gold", 2)?
-        .set_default("schedule.vacuum", 30)?
+        .set_default("schedule.silver", 10)?
+        .set_default("schedule.gold", 10)?
+        .set_default("schedule.vacuum", 15)?
         .set_default("schedule.dimension", 300)?
         // request
         .set_default("request.channel_size", 100)?
-        .set_default("request.consumer_batch_size", 10)?
+        .set_default("request.consumer_batch_size", 20)?
         // ps
         .set_default("ps.channel_size", 500)?
-        .set_default("ps.producer_frequency", 1)?
-        .set_default("ps.consumer_batch_size", 50)?
+        .set_default("ps.producer_frequency", 3)?
+        .set_default("ps.consumer_batch_size", 200)?
         // lsof
         .set_default("lsof.channel_size", 1000)?
-        .set_default("lsof.producer_frequency", 10)?
-        .set_default("lsof.consumer_batch_size", 150)?
+        .set_default("lsof.producer_frequency", 15)?
+        .set_default("lsof.consumer_batch_size", 200)?
         // network
-        .set_default("network.channel_size", 100)?
-        .set_default("network.consumer_batch_size", 5)?;
+        .set_default("network.channel_size", 500)?
+        .set_default("network.producer_frequency", 1)?
+        .set_default("network.consumer_batch_size", 200)?;
 
     let config_file = Path::new(CONFIG_FILE_PATH);
     if config_file.exists() {
