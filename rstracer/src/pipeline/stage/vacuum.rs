@@ -6,9 +6,9 @@ pub fn request(config: VacuumConfig, schema: Schema) -> String {
 
     for table in schema.tables {
         for layer in config.to_list() {
-            if table.name.starts_with(&layer.0) && layer.1 > 0 {
+            if table.name.starts_with(&layer.0) && layer.1 > 0 && !table.name.contains("_dim_") {
                 query.push_str(&format!(
-                    "DELETE FROM memory.{} WHERE inserted_at + '{} seconds' < CURRENT_TIMESTAMP;",
+                    "BEGIN; DELETE FROM memory.{} WHERE inserted_at + '{} seconds' < CURRENT_TIMESTAMP; COMMIT;",
                     table.name, layer.1
                 ));
             }
