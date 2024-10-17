@@ -677,3 +677,112 @@ pub fn create_schema_request(disk_file_path: &str) -> String {
         create_tables_request("disk")
     )
 }
+
+#[cfg(test)]
+pub mod tests {
+    use super::*;
+    use crate::pipeline::stage::tests::get_test_connection;
+
+    pub fn create_mock_schema() -> Schema {
+        Schema {
+            tables: vec![
+                Table {
+                    name: "bronze_process_list".to_string(),
+                    columns: vec![
+                        Column {
+                            name: "pid".to_string(),
+                            type_name: "USMALLINT".to_string(),
+                            is_nullable: false,
+                            is_autoincrement: false,
+                        },
+                        Column {
+                            name: "inserted_at".to_string(),
+                            type_name: "TIMESTAMP".to_string(),
+                            is_nullable: true,
+                            is_autoincrement: false,
+                        },
+                    ],
+                },
+                Table {
+                    name: "silver_process_list".to_string(),
+                    columns: vec![
+                        Column {
+                            name: "pid".to_string(),
+                            type_name: "USMALLINT".to_string(),
+                            is_nullable: false,
+                            is_autoincrement: false,
+                        },
+                        Column {
+                            name: "inserted_at".to_string(),
+                            type_name: "TIMESTAMP".to_string(),
+                            is_nullable: true,
+                            is_autoincrement: false,
+                        },
+                    ],
+                },
+                Table {
+                    name: "gold_process_list".to_string(),
+                    columns: vec![
+                        Column {
+                            name: "pid".to_string(),
+                            type_name: "USMALLINT".to_string(),
+                            is_nullable: false,
+                            is_autoincrement: false,
+                        },
+                        Column {
+                            name: "inserted_at".to_string(),
+                            type_name: "TIMESTAMP".to_string(),
+                            is_nullable: true,
+                            is_autoincrement: false,
+                        },
+                    ],
+                },
+                Table {
+                    name: "dim_hosts".to_string(),
+                    columns: vec![
+                        Column {
+                            name: "name".to_string(),
+                            type_name: "TEXT".to_string(),
+                            is_nullable: false,
+                            is_autoincrement: false,
+                        },
+                        Column {
+                            name: "inserted_at".to_string(),
+                            type_name: "TIMESTAMP".to_string(),
+                            is_nullable: true,
+                            is_autoincrement: false,
+                        },
+                    ],
+                },
+            ],
+        }
+    }
+
+    #[test]
+    fn test_create_database() {
+        let connection = get_test_connection();
+        let mut statement = connection
+            .prepare(
+                r#"
+                        SELECT table_name, table_catalog
+                        FROM information_schema.columns
+                        GROUP BY table_name, table_catalog;"#,
+            )
+            .unwrap();
+        let mut rows = statement.query([]).unwrap();
+        let mut disk_count = 0;
+        let mut mem_count = 0;
+
+        while let Some(row) = rows.next().unwrap() {
+            let table_catalog: String = row.get(1).unwrap();
+            if table_catalog == "disk" {
+                disk_count += 1;
+            } else if table_catalog == "memory" {
+                mem_count += 1;
+            }
+        }
+
+        assert_eq!(disk_count, 36);
+        assert_eq!(mem_count, 36);
+    }
+}

@@ -17,3 +17,24 @@ pub fn request(config: VacuumConfig, schema: Schema) -> String {
 
     query
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pipeline::stage::schema::tests::create_mock_schema;
+
+    #[test]
+    fn test_vacuum_request() {
+        let schema = create_mock_schema();
+        let vacuum_config = VacuumConfig {
+            bronze: 15,
+            silver: 30,
+            gold: 1000,
+        };
+        let request = request(vacuum_config, schema);
+        assert_eq!(
+            request,
+            r#"BEGIN; DELETE FROM memory.bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP; COMMIT;BEGIN; DELETE FROM memory.silver_process_list WHERE inserted_at + '30 seconds' < CURRENT_TIMESTAMP; COMMIT;BEGIN; DELETE FROM memory.gold_process_list WHERE inserted_at + '1000 seconds' < CURRENT_TIMESTAMP; COMMIT;"#
+        );
+    }
+}
