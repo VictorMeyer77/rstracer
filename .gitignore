@@ -16,3 +16,4 @@ Cargo.lock
 # Remove all duck db database files
 *.db
 *.duckdb
+*.wal
