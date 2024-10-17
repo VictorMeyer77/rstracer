@@ -14,7 +14,7 @@ INSERT INTO memory.gold_process_list BY NAME
         pmem AS last_pmem,
         _id AS silver_id,
         lstart AS started_at,
-        inserted_at AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM
     (
         SELECT
@@ -25,7 +25,7 @@ INSERT INTO memory.gold_process_list BY NAME
     WHERE ROW_NUM = 1
 )
 ON CONFLICT DO UPDATE SET
-    updated_at = EXCLUDED.updated_at,
+    inserted_at = EXCLUDED.inserted_at,
     last_pcpu = EXCLUDED.last_pcpu,
     min_pcpu = LEAST(min_pcpu, EXCLUDED.min_pcpu),
     max_pcpu = GREATEST(max_pcpu, EXCLUDED.max_pcpu),
@@ -49,7 +49,7 @@ INSERT INTO memory.gold_open_files_regular BY NAME
         SIZE AS last_size,
         _id AS silver_id,
         created_at AS started_at,
-        created_at AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM
         (
             SELECT
@@ -62,7 +62,7 @@ INSERT INTO memory.gold_open_files_regular BY NAME
     WHERE row_num = 1
 )
 ON CONFLICT DO UPDATE SET
-    updated_at = EXCLUDED.updated_at,
+    inserted_at = EXCLUDED.inserted_at,
     last_size = EXCLUDED.last_size,
     min_size = LEAST(min_size, EXCLUDED.min_size),
     max_size = GREATEST(max_size, EXCLUDED.max_size)
@@ -82,7 +82,7 @@ INSERT OR REPLACE INTO memory.gold_open_files_network BY NAME
         destination_port,
         silver_id,
         created_at AS started_at,
-        created_at AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM
     (
         SELECT
@@ -136,7 +136,7 @@ INSERT OR REPLACE INTO memory.gold_network_packet BY NAME
         transport,
         application,
         created_at,
-        CURRENT_TIMESTAMP AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_network_packet
 );
 "#;
@@ -153,7 +153,7 @@ INSERT OR REPLACE INTO memory.gold_network_ip BY NAME
         ip.destination AS destination_address,
         transport.destination AS destination_port,
         packet.created_at,
-        packet.inserted_at AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_network_transport transport
     INNER JOIN memory.silver_network_ip ip ON transport._id = ip._id
     INNER JOIN memory.silver_network_packet packet ON packet._id = ip._id
@@ -176,12 +176,12 @@ INSERT OR REPLACE INTO memory.gold_process_network BY NAME
         pro.silver_id AS process_svr_id,
         ofn.silver_id AS open_file_svr_id,
         net._id AS packet_id,
-        CURRENT_TIMESTAMP AS created_at,
+        CURRENT_TIMESTAMP AS inserted_at,
     FROM memory.gold_process_list pro
     INNER JOIN memory.gold_open_files_network ofn
     ON pro.pid = ofn.pid
     AND ofn.started_at > pro.started_at
-    AND ofn.started_at < pro.updated_at
+    AND ofn.started_at < pro.inserted_at
     LEFT JOIN (
         SELECT
             _id,
@@ -192,7 +192,7 @@ INSERT OR REPLACE INTO memory.gold_process_network BY NAME
             destination_address,
             destination_port,
             created_at,
-            updated_at,
+            inserted_at,
             source_address AS address_key,
             source_port AS port_key,
             TRUE AS is_source,
@@ -207,7 +207,7 @@ INSERT OR REPLACE INTO memory.gold_process_network BY NAME
             destination_address,
             destination_port,
             created_at,
-            updated_at,
+            inserted_at,
             destination_address AS address_key,
             destination_port AS port_key,
             FALSE AS is_source,
@@ -216,7 +216,7 @@ INSERT OR REPLACE INTO memory.gold_process_network BY NAME
     ON host(net.address_key) = host(ofn.source_address)
     AND net.port_key = ofn.source_port
     AND net.created_at > ofn.started_at
-    AND net.created_at < ofn.updated_at
+    AND net.created_at < ofn.inserted_at
 );
 "#;
 
@@ -227,7 +227,7 @@ INSERT OR REPLACE INTO memory.gold_process_command BY NAME
         pro.pid,
         pro.ppid,
         ofn.command,
-        CURRENT_TIMESTAMP AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_process_list pro
     LEFT JOIN memory.silver_open_files ofn ON pro.pid = ofn.pid
 );
@@ -236,43 +236,43 @@ INSERT OR REPLACE INTO memory.gold_process_command BY NAME
 const GOLD_TECH_TABLE_COUNT: &str = r#"
 INSERT INTO memory.gold_tech_table_count BY NAME
 (
-    SELECT 0 AS _id, 'bronze_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_process_list UNION
-    SELECT 1 AS _id, 'bronze_open_files' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_open_files UNION
-    SELECT 2 AS _id, 'bronze_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_packet UNION
-    SELECT 3 AS _id, 'bronze_network_ethernet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_ethernet UNION
-    SELECT 4 AS _id, 'bronze_network_interface_address' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_interface_address UNION
-    SELECT 5 AS _id, 'bronze_network_ipv4' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_ipv4 UNION
-    SELECT 6 AS _id, 'bronze_network_ipv6' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_ipv6 UNION
-    SELECT 7 AS _id, 'bronze_network_arp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_arp UNION
-    SELECT 8 AS _id, 'bronze_network_tcp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_tcp UNION
-    SELECT 9 AS _id, 'bronze_network_udp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_udp UNION
-    SELECT 10 AS _id, 'bronze_network_icmp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_icmp UNION
-    SELECT 11 AS _id, 'bronze_network_tls' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_tls UNION
-    SELECT 12 AS _id, 'bronze_network_http' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_http UNION
-    SELECT 13 AS _id, 'bronze_network_dns_header' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_dns_header UNION
-    SELECT 14 AS _id, 'bronze_network_dns_query' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_dns_query UNION
-    SELECT 15 AS _id, 'bronze_network_dns_response' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.bronze_network_dns_response UNION
-    SELECT 16 AS _id, 'silver_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_process_list UNION
-    SELECT 17 AS _id, 'silver_open_files' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_open_files UNION
-    SELECT 18 AS _id, 'silver_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_packet UNION
-    SELECT 19 AS _id, 'silver_network_ethernet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_ethernet UNION
-    SELECT 20 AS _id, 'silver_network_interface_address' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_interface_address UNION
-    SELECT 21 AS _id, 'silver_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_ip UNION
-    SELECT 22 AS _id, 'silver_network_arp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_arp UNION
-    SELECT 23 AS _id, 'silver_network_transport' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_transport UNION
-    SELECT 24 AS _id, 'silver_network_dns' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.silver_network_dns UNION
-    SELECT 25 AS _id, 'gold_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_process_list UNION
-    SELECT 26 AS _id, 'gold_open_files_regular' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_open_files_regular UNION
-    SELECT 27 AS _id, 'gold_open_files_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_open_files_network UNION
-    SELECT 28 AS _id, 'gold_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_network_packet UNION
-    SELECT 29 AS _id, 'gold_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_network_ip UNION
-    SELECT 30 AS _id, 'gold_process_command' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_process_command UNION
-    SELECT 31 AS _id, 'gold_process_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_process_network UNION
-    SELECT 32 AS _id, 'gold_dim_hosts' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_dim_hosts UNION
-    SELECT 33 AS _id, 'gold_dim_services' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS updated_at FROM memory.gold_dim_services
+    SELECT 0 AS _id, 'bronze_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_process_list UNION
+    SELECT 1 AS _id, 'bronze_open_files' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_open_files UNION
+    SELECT 2 AS _id, 'bronze_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_packet UNION
+    SELECT 3 AS _id, 'bronze_network_ethernet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_ethernet UNION
+    SELECT 4 AS _id, 'bronze_network_interface_address' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_interface_address UNION
+    SELECT 5 AS _id, 'bronze_network_ipv4' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_ipv4 UNION
+    SELECT 6 AS _id, 'bronze_network_ipv6' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_ipv6 UNION
+    SELECT 7 AS _id, 'bronze_network_arp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_arp UNION
+    SELECT 8 AS _id, 'bronze_network_tcp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_tcp UNION
+    SELECT 9 AS _id, 'bronze_network_udp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_udp UNION
+    SELECT 10 AS _id, 'bronze_network_icmp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_icmp UNION
+    SELECT 11 AS _id, 'bronze_network_tls' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_tls UNION
+    SELECT 12 AS _id, 'bronze_network_http' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_http UNION
+    SELECT 13 AS _id, 'bronze_network_dns_header' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_dns_header UNION
+    SELECT 14 AS _id, 'bronze_network_dns_query' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_dns_query UNION
+    SELECT 15 AS _id, 'bronze_network_dns_response' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.bronze_network_dns_response UNION
+    SELECT 16 AS _id, 'silver_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_process_list UNION
+    SELECT 17 AS _id, 'silver_open_files' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_open_files UNION
+    SELECT 18 AS _id, 'silver_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_packet UNION
+    SELECT 19 AS _id, 'silver_network_ethernet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_ethernet UNION
+    SELECT 20 AS _id, 'silver_network_interface_address' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_interface_address UNION
+    SELECT 21 AS _id, 'silver_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_ip UNION
+    SELECT 22 AS _id, 'silver_network_arp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_arp UNION
+    SELECT 23 AS _id, 'silver_network_transport' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_transport UNION
+    SELECT 24 AS _id, 'silver_network_dns' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.silver_network_dns UNION
+    SELECT 25 AS _id, 'gold_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_process_list UNION
+    SELECT 26 AS _id, 'gold_open_files_regular' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_open_files_regular UNION
+    SELECT 27 AS _id, 'gold_open_files_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_open_files_network UNION
+    SELECT 28 AS _id, 'gold_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_network_packet UNION
+    SELECT 29 AS _id, 'gold_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_network_ip UNION
+    SELECT 30 AS _id, 'gold_process_command' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_process_command UNION
+    SELECT 31 AS _id, 'gold_process_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_process_network UNION
+    SELECT 32 AS _id, 'gold_dim_hosts' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_dim_hosts UNION
+    SELECT 33 AS _id, 'gold_dim_services' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM memory.gold_dim_services
 )
 ON CONFLICT DO UPDATE SET
-    updated_at = EXCLUDED.updated_at,
+    inserted_at = EXCLUDED.inserted_at,
     last_count = EXCLUDED.last_count,
     min_count = LEAST(min_count, EXCLUDED.min_count),
     max_count = GREATEST(max_count, EXCLUDED.max_count)
@@ -289,7 +289,7 @@ INSERT INTO memory.gold_tech_chrono BY NAME
         EPOCH(MIN(svr_ingestion_duration)) AS svr_min_ingest,
         EPOCH(MAX(brz_ingestion_duration) + MAX(svr_ingestion_duration)) AS max_ingest,
         EPOCH(MIN(brz_ingestion_duration) + MIN(svr_ingestion_duration)) AS min_ingest,
-        CURRENT_TIMESTAMP AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_process_list
     UNION ALL
     SELECT
@@ -300,7 +300,7 @@ INSERT INTO memory.gold_tech_chrono BY NAME
         EPOCH(MIN(svr_ingestion_duration)) AS svr_min_ingest,
         EPOCH(MAX(brz_ingestion_duration) + MAX(svr_ingestion_duration)) AS max_ingest,
         EPOCH(MIN(brz_ingestion_duration) + MIN(svr_ingestion_duration)) AS min_ingest,
-        CURRENT_TIMESTAMP AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_open_files
     UNION ALL
     SELECT
@@ -311,11 +311,11 @@ INSERT INTO memory.gold_tech_chrono BY NAME
         EPOCH(MIN(svr_ingestion_duration)) AS svr_min_ingest,
         EPOCH(MAX(brz_ingestion_duration) + MAX(svr_ingestion_duration)) AS max_ingest,
         EPOCH(MIN(brz_ingestion_duration) + MIN(svr_ingestion_duration)) AS min_ingest,
-        CURRENT_TIMESTAMP AS updated_at
+        CURRENT_TIMESTAMP AS inserted_at
     FROM memory.silver_network_packet
 )
 ON CONFLICT DO UPDATE SET
-    updated_at = EXCLUDED.updated_at,
+    inserted_at = EXCLUDED.inserted_at,
     brz_max_ingest = GREATEST(brz_max_ingest, EXCLUDED.brz_max_ingest),
     brz_min_ingest = LEAST(brz_min_ingest, EXCLUDED.brz_min_ingest),
     svr_max_ingest = GREATEST(svr_max_ingest, EXCLUDED.svr_max_ingest),

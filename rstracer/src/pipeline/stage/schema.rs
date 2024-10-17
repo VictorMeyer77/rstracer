@@ -460,7 +460,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_services (
     name TEXT,
     port USMALLINT,
     protocol TEXT,
-    updated_at TIMESTAMP,
+    inserted_at TIMESTAMP,
     PRIMARY KEY (name, port, protocol)
 );
 "#;
@@ -469,7 +469,7 @@ const GOLD_DIM_HOSTS: &str = r#"
 CREATE TABLE IF NOT EXISTS {db_name}.gold_dim_hosts (
     name TEXT,
     address TEXT,
-    updated_at TIMESTAMP,
+    inserted_at TIMESTAMP,
     PRIMARY KEY (name, address)
 );
 "#;
@@ -490,7 +490,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_process_list (
     last_pmem FLOAT,
     silver_id BIGINT,
     started_at TIMESTAMP,
-    updated_at TIMESTAMP,
+    inserted_at TIMESTAMP,
     PRIMARY KEY (pid, started_at)
 );
 "#;
@@ -508,7 +508,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_regular (
     last_size BIGINT,
     silver_id INTEGER,
     started_at TIMESTAMP,
-    updated_at TIMESTAMP,
+    inserted_at TIMESTAMP,
     PRIMARY KEY (pid, fd, node)
 );
 "#;
@@ -525,7 +525,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_open_files_network (
     destination_port USMALLINT,
     silver_id INTEGER,
     started_at TIMESTAMP,
-    updated_at TIMESTAMP
+    inserted_at TIMESTAMP
 );
 "#;
 
@@ -539,7 +539,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_network_packet (
     network TEXT,
     transport TEXT,
     application TEXT,
-    updated_at TIMESTAMP
+    inserted_at TIMESTAMP
 );
 "#;
 
@@ -553,7 +553,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_network_ip (
     destination_address INET,
     destination_port TEXT,
     created_at TIMESTAMP,
-    updated_at TIMESTAMP
+    inserted_at TIMESTAMP
 );
 "#;
 
@@ -571,7 +571,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_process_network (
 	process_svr_id INTEGER,
 	open_file_svr_id INTEGER,
 	packet_id UHUGEINT,
-    created_at TIMESTAMP
+    inserted_at TIMESTAMP
 );
 "#;
 
@@ -580,7 +580,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_process_command (
 	pid USMALLINT PRIMARY KEY,
 	ppid USMALLINT,
 	command TEXT,
-	updated_at TIMESTAMP
+	inserted_at TIMESTAMP
 );
 "#;
 
@@ -591,7 +591,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_tech_table_count (
 	min_count BIGINT,
 	max_count BIGINT,
 	last_count BIGINT,
-	updated_at TIMESTAMP
+	inserted_at TIMESTAMP
 );
 "#;
 
@@ -604,7 +604,7 @@ CREATE TABLE IF NOT EXISTS {db_name}.gold_tech_chrono (
 	svr_min_ingest FLOAT,
 	max_ingest FLOAT,
 	min_ingest FLOAT,
-	updated_at TIMESTAMP
+	inserted_at TIMESTAMP
 );
 "#;
 
