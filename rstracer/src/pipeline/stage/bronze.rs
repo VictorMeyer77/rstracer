@@ -842,4 +842,39 @@ mod tests {
             assert!(count > 10);
         }
     }
+
+    #[test]
+    fn test_capture_to_network_sql() {
+        let connection = create_test_connection();
+        let device = pcap::Device::lookup().unwrap().unwrap();
+        let packet = vec![
+            204, 45, 27, 186, 195, 248, 248, 99, 63, 244, 10, 21, 8, 0, 69, 0, 0, 67, 129, 205, 0,
+            0, 64, 17, 117, 60, 192, 168, 1, 79, 192, 168, 1, 1, 174, 55, 0, 53, 0, 47, 113, 146,
+            86, 48, 1, 0, 0, 1, 0, 0, 0, 0, 0, 1, 6, 116, 97, 105, 118, 101, 109, 3, 99, 111, 109,
+            0, 0, 1, 0, 1, 0, 0, 41, 5, 192, 0, 0, 0, 0, 0, 0,
+        ];
+        let capture = Capture::parse(&packet, &device).unwrap();
+        connection
+            .execute_batch(&capture.to_insert_sql(None))
+            .unwrap();
+        let mut statement = connection
+            .prepare(
+                r#"SELECT SUM(c) FROM
+                            (
+                                SELECT count(*) AS c FROM bronze_network_packet UNION ALL
+                                SELECT count(*) AS c FROM bronze_network_ethernet UNION ALL
+                                SELECT count(*) AS c FROM bronze_network_ipv4 UNION ALL
+                                SELECT count(*) AS c FROM bronze_network_udp UNION ALL
+                                SELECT count(*) AS c FROM bronze_network_dns_header UNION ALL
+                                SELECT count(*) AS c FROM bronze_network_dns_query
+                            )"#,
+            )
+            .unwrap();
+        let mut rows = statement.query([]).unwrap();
+
+        if let Some(row) = rows.next().unwrap() {
+            let count: usize = row.get(0).unwrap();
+            assert_eq!(count, 6);
+        }
+    }
 }
