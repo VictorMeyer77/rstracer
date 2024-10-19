@@ -46,3 +46,51 @@ pub fn copy_layer_request(
     }
     Ok(query)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::pipeline::stage::schema::tests::create_mock_schema;
+
+    #[test]
+    fn test_copy_layer_request_without_overwrite() {
+        let schema = create_mock_schema();
+        let source = "source_db";
+        let target = "target_db";
+        let layer = "bronze";
+        let overwrite = false;
+
+        let result = copy_layer_request(&schema, source, target, layer, overwrite).unwrap();
+        let expected = "INSERT INTO target_db.bronze_process_list (pid,inserted_at) SELECT pid,inserted_at FROM source_db.bronze_process_list;";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_copy_layer_request_with_overwrite() {
+        let schema = create_mock_schema();
+        let source = "source_db";
+        let target = "target_db";
+        let layer = "silver";
+        let overwrite = true;
+
+        let result = copy_layer_request(&schema, source, target, layer, overwrite).unwrap();
+        let expected = "TRUNCATE target_db.silver_process_list;INSERT INTO target_db.silver_process_list (pid,inserted_at) SELECT pid,inserted_at FROM source_db.silver_process_list;";
+
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_copy_layer_request_empty_schema() {
+        let schema = Schema { tables: vec![] };
+        let source = "source_db";
+        let target = "target_db";
+        let layer = "bronze";
+        let overwrite = false;
+
+        let result = copy_layer_request(&schema, source, target, layer, overwrite).unwrap();
+        let expected = "";
+
+        assert_eq!(result, expected);
+    }
+}

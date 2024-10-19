@@ -11,7 +11,7 @@ pub mod tests {
     use crate::pipeline::stage::schema::create_schema_request;
     use duckdb::Connection;
 
-    pub fn get_test_connection() -> Connection {
+    pub fn create_test_connection() -> Connection {
         let connection = Connection::open_in_memory().unwrap();
         connection
             .execute_batch(&create_schema_request("test.db"))

@@ -681,7 +681,7 @@ pub fn create_schema_request(disk_file_path: &str) -> String {
 #[cfg(test)]
 pub mod tests {
     use super::*;
-    use crate::pipeline::stage::tests::get_test_connection;
+    use crate::pipeline::stage::tests::create_test_connection;
 
     pub fn create_mock_schema() -> Schema {
         Schema {
@@ -760,7 +760,7 @@ pub mod tests {
 
     #[test]
     fn test_create_database() {
-        let connection = get_test_connection();
+        let connection = create_test_connection();
         let mut statement = connection
             .prepare(
                 r#"
