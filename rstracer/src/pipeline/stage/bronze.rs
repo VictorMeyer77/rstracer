@@ -32,6 +32,16 @@ pub trait BronzeBatch {
     fn to_insert_value(&self) -> String;
 }
 
+pub fn create_insert_batch_request<T: BronzeBatch>(batch: Vec<T>) -> String {
+    let values: Vec<String> = batch.iter().map(|b| b.to_insert_value()).collect();
+
+    if values.is_empty() {
+        "".to_string()
+    } else {
+        format!("{} {};", T::get_insert_header(), values.join(","))
+    }
+}
+
 pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> {
     let mut request_buffer: Vec<String> = vec![];
 
@@ -65,9 +75,7 @@ pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> 
 
 impl BronzeBatch for Process {
     fn get_insert_header() -> String {
-        r#"INSERT INTO memory.bronze_process_list
-        (pid, ppid, uid, lstart, pcpu, pmem, status, command, created_at, inserted_at, brz_ingestion_duration)
-        VALUES "#
+        r#"INSERT INTO memory.bronze_process_list (pid, ppid, uid, lstart, pcpu, pmem, status, command, created_at, inserted_at, brz_ingestion_duration) VALUES "#
             .to_string()
     }
 
@@ -88,9 +96,7 @@ impl BronzeBatch for Process {
 
 impl BronzeBatch for OpenFile {
     fn get_insert_header() -> String {
-        r#"INSERT INTO memory.bronze_open_files
-        (command, pid, uid, fd, type, device, size, node, name, created_at, inserted_at, brz_ingestion_duration)
-        VALUES "#
+        r#"INSERT INTO memory.bronze_open_files (command, pid, uid, fd, type, device, size, node, name, created_at, inserted_at, brz_ingestion_duration) VALUES "#
             .to_string()
     }
 
@@ -631,8 +637,26 @@ fn bronze_tls(tls: Tls, packet_id: u128) -> String {
 
 #[cfg(test)]
 mod tests {
-
     use super::*;
+    use crate::pipeline::stage::tests::create_test_connection;
+    use lsof::lsof::lsof;
+    use ps::ps::ps;
+
+    #[derive(Debug)]
+    struct BronzeBatchTest {
+        id: i32,
+        name: String,
+    }
+
+    impl BronzeBatch for BronzeBatchTest {
+        fn get_insert_header() -> String {
+            "INSERT INTO test (id, name) VALUES".to_string()
+        }
+
+        fn to_insert_value(&self) -> String {
+            format!("({}, '{}')", self.id, self.name)
+        }
+    }
 
     #[test]
     fn test_concat_requests_with_empty_requests() {
@@ -742,5 +766,80 @@ mod tests {
         let result = concat_requests(requests, batch_size);
         let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
         assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_create_insert_batch_request_empty() {
+        let batch: Vec<Process> = Vec::new();
+        let result = create_insert_batch_request(batch);
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_create_insert_batch_request_single() {
+        let batch = vec![BronzeBatchTest {
+            id: 1,
+            name: "Process1".to_string(),
+        }];
+        let result = create_insert_batch_request(batch);
+        assert_eq!(
+            result,
+            "INSERT INTO test (id, name) VALUES (1, 'Process1');"
+        );
+    }
+
+    #[test]
+    fn test_create_insert_batch_request_multiple() {
+        let batch = vec![
+            BronzeBatchTest {
+                id: 1,
+                name: "Process1".to_string(),
+            },
+            BronzeBatchTest {
+                id: 2,
+                name: "Process2".to_string(),
+            },
+        ];
+        let result = create_insert_batch_request(batch);
+        assert_eq!(
+            result,
+            "INSERT INTO test (id, name) VALUES (1, 'Process1'),(2, 'Process2');"
+        );
+    }
+
+    #[test]
+    fn test_insert_processes() {
+        let connection = create_test_connection();
+        let processes = ps().unwrap();
+        connection
+            .execute_batch(&create_insert_batch_request(processes))
+            .unwrap();
+        let mut statement = connection
+            .prepare("SELECT count(*) FROM memory.bronze_process_list;")
+            .unwrap();
+        let mut rows = statement.query([]).unwrap();
+
+        if let Some(row) = rows.next().unwrap() {
+            let count: usize = row.get(0).unwrap();
+            assert!(count > 10);
+        }
+    }
+
+    #[test]
+    fn test_insert_open_files() {
+        let connection = create_test_connection();
+        let processes = lsof().unwrap();
+        connection
+            .execute_batch(&create_insert_batch_request(processes))
+            .unwrap();
+        let mut statement = connection
+            .prepare("SELECT count(*) FROM memory.bronze_open_files;")
+            .unwrap();
+        let mut rows = statement.query([]).unwrap();
+
+        if let Some(row) = rows.next().unwrap() {
+            let count: usize = row.get(0).unwrap();
+            assert!(count > 10);
+        }
     }
 }

@@ -1,7 +1,7 @@
 use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
-use crate::pipeline::stage::bronze::{concat_requests, Bronze, BronzeBatch};
+use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
 use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
@@ -149,16 +149,10 @@ pub async fn process_task(
             .collect();
 
         for batch in batches {
-            let values: Vec<String> = batch
-                .iter()
-                .map(|process| process.to_insert_value())
-                .collect();
-            let request = if values.is_empty() {
-                "".to_string()
-            } else {
-                format!("{} {};", Process::get_insert_header(), values.join(","))
-            };
-            if let Err(e) = sender_request.send(request).await {
+            if let Err(e) = sender_request
+                .send(create_insert_batch_request(batch))
+                .await
+            {
                 warn!("{}", e);
                 stop_flag.store(true, Ordering::Release);
             }
@@ -205,16 +199,10 @@ pub async fn open_file_task(
             .collect();
 
         for batch in batches {
-            let values: Vec<String> = batch
-                .iter()
-                .map(|open_file| open_file.to_insert_value())
-                .collect();
-            let request = if values.is_empty() {
-                "".to_string()
-            } else {
-                format!("{} {};", OpenFile::get_insert_header(), values.join(","))
-            };
-            if let Err(e) = sender_request.send(request).await {
+            if let Err(e) = sender_request
+                .send(create_insert_batch_request(batch))
+                .await
+            {
                 warn!("{}", e);
                 stop_flag.store(true, Ordering::Release);
             }
