@@ -47,18 +47,18 @@ pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> 
 
     let request_unique: Vec<&str> = requests
         .iter()
-        .flat_map(|request| request.split(';'))
+        .flat_map(|request| request.split("INSERT"))
         .filter(|s| !s.trim().is_empty())
         .collect();
 
     let mut reduced: HashMap<&str, Vec<&str>> = HashMap::new();
     for request in request_unique {
         let mut parts = request.splitn(2, "VALUES");
-        if let (Some(prefix), Some(values)) = (parts.next(), parts.next()) {
-            reduced
-                .entry(prefix.trim())
-                .or_default()
-                .push(values.trim());
+        if let (Some(prefix), Some(value)) = (parts.next(), parts.next()) {
+            reduced.entry(prefix.trim()).or_default().push({
+                let value = value.trim();
+                &value[..value.len() - 1]
+            });
         }
     }
 
@@ -66,7 +66,7 @@ pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> 
         values.sort();
         values.dedup();
         for chunk in values.chunks(batch_size) {
-            request_buffer.push(format!("{} VALUES {};", key, chunk.join(",")));
+            request_buffer.push(format!("INSERT {} VALUES {};", key, chunk.join(",")));
         }
     }
 
@@ -765,6 +765,29 @@ mod tests {
         let batch_size = 2;
         let result = concat_requests(requests, batch_size);
         let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_multiple_requests() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A'); INSERT INTO table1 VALUES (2, 'B');"
+                .to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A'),(2, 'B');".to_string()];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_concat_requests_with_semicolon() {
+        let requests = vec![
+            "INSERT INTO table1 VALUES (1, 'A;'); INSERT INTO table1 VALUES (2, 'B');".to_string(),
+        ];
+        let batch_size = 2;
+        let result = concat_requests(requests, batch_size);
+        let expected = vec!["INSERT INTO table1 VALUES (1, 'A;'),(2, 'B');".to_string()];
         assert_eq!(result, expected);
     }
 
