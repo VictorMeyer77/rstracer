@@ -25,11 +25,14 @@ impl EtcReader<Service> for Service {
         let contents = fs::read_to_string(path)?;
         for line in contents.lines() {
             if let Some(captures) = regex.captures(line) {
-                services_buffer.push(Service {
+                let service = Service {
                     name: captures[1].to_string(),
                     port: captures[2].parse()?,
                     protocol: captures[3].to_string(),
-                })
+                };
+                if !services_buffer.contains(&service) {
+                    services_buffer.push(service)
+                }
             }
         }
         Ok(services_buffer)
