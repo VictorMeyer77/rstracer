@@ -1,44 +1,67 @@
 use crate::config::VacuumConfig;
-use crate::pipeline::stage::schema::Schema;
+use crate::pipeline::stage::schema::get_schema;
 
-pub fn request(config: VacuumConfig, schema: Schema) -> String {
-    let mut query: String = "".to_string();
+pub fn request(config: VacuumConfig) -> String {
+    let mut query: String = String::new();
 
-    for table in schema.tables {
+    for table in get_schema() {
         for layer in config.to_list() {
-            if table.name.starts_with(&layer.0)
+            if table.starts_with(&layer.0)
                 && layer.1 > 0
-                && !table.name.contains("_dim_")
-                && !table.name.contains("_tech_")
+                && !table.contains("_dim_")
+                && !table.contains("_tech_")
             {
                 query.push_str(&format!(
-                    "BEGIN; DELETE FROM memory.{} WHERE inserted_at + '{} seconds' < CURRENT_TIMESTAMP; COMMIT;",
-                    table.name, layer.1
+                    "DELETE FROM {} WHERE inserted_at + '{} seconds' < CURRENT_TIMESTAMP;",
+                    table, layer.1
                 ));
             }
         }
     }
-
     query
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::pipeline::stage::schema::tests::create_mock_schema;
 
     #[test]
     fn test_vacuum_request() {
-        let schema = create_mock_schema();
         let vacuum_config = VacuumConfig {
             bronze: 15,
             silver: 30,
             gold: 1000,
         };
-        let request = request(vacuum_config, schema);
-        assert_eq!(
-            request,
-            r#"BEGIN; DELETE FROM memory.bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP; COMMIT;BEGIN; DELETE FROM memory.silver_process_list WHERE inserted_at + '30 seconds' < CURRENT_TIMESTAMP; COMMIT;BEGIN; DELETE FROM memory.gold_process_list WHERE inserted_at + '1000 seconds' < CURRENT_TIMESTAMP; COMMIT;"#
-        );
+        let request = request(vacuum_config);
+        assert!(!request.contains("_dim_"));
+        assert!(!request.contains("_tech_"));
+        assert_eq!(request.matches("DELETE FROM").count(), 32);
+        assert!(request.contains(
+            "DELETE FROM bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP"
+        ));
+        assert!(request.contains(
+            "DELETE FROM silver_process_list WHERE inserted_at + '30 seconds' < CURRENT_TIMESTAMP"
+        ));
+        assert!(request.contains(
+            "DELETE FROM gold_process_list WHERE inserted_at + '1000 seconds' < CURRENT_TIMESTAMP"
+        ));
+    }
+
+    #[test]
+    fn test_vacuum_request_with_permanent() {
+        let vacuum_config = VacuumConfig {
+            bronze: 15,
+            silver: 30,
+            gold: 0,
+        };
+        let request = request(vacuum_config);
+        assert!(!request.contains("gold_"));
+        assert_eq!(request.matches("DELETE FROM").count(), 25);
+        assert!(request.contains(
+            "DELETE FROM bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP"
+        ));
+        assert!(request.contains(
+            "DELETE FROM silver_process_list WHERE inserted_at + '30 seconds' < CURRENT_TIMESTAMP"
+        ));
     }
 }

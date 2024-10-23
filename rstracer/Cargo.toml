@@ -14,6 +14,7 @@ network = { path = "../network"}
 pcap = "2.2.0"
 pnet = "0.35.0"
 ps = { path = "../ps"}
+regex = "1.11.0"
 serde = { version = "1.0.208", features = ["derive"] }
 thiserror = "1.0.63"
 tokio = { version = "1.39.2", features = ["full"] }

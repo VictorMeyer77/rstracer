@@ -1,15 +1,5 @@
 
-disk_file_path = "rstracer.db"
-
-[persist_layer]
-bronze = true
-silver = true
-gold = true
-
-[load_layer]
-bronze = false
-silver = false
-gold = false
+in_memory = false
 
 [vacuum]
 bronze = 15

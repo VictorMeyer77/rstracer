@@ -34,7 +34,6 @@ pub trait BronzeBatch {
 
 pub fn create_insert_batch_request<T: BronzeBatch>(batch: Vec<T>) -> String {
     let values: Vec<String> = batch.iter().map(|b| b.to_insert_value()).collect();
-
     if values.is_empty() {
         "".to_string()
     } else {
@@ -45,28 +44,28 @@ pub fn create_insert_batch_request<T: BronzeBatch>(batch: Vec<T>) -> String {
 pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> {
     let mut request_buffer: Vec<String> = vec![];
 
-    let request_unique: Vec<&str> = requests
+    let requests_distinct: Vec<&str> = requests
         .iter()
         .flat_map(|request| request.split("INSERT"))
         .filter(|s| !s.trim().is_empty())
         .collect();
 
-    let mut reduced: HashMap<&str, Vec<&str>> = HashMap::new();
-    for request in request_unique {
+    let mut values_by_table: HashMap<&str, Vec<&str>> = HashMap::new();
+    for request in requests_distinct {
         let mut parts = request.splitn(2, "VALUES");
         if let (Some(prefix), Some(value)) = (parts.next(), parts.next()) {
-            reduced.entry(prefix.trim()).or_default().push({
+            values_by_table.entry(prefix.trim()).or_default().push({
                 let value = value.trim();
                 &value[..value.len() - 1]
             });
         }
     }
 
-    for (key, mut values) in reduced {
+    for (table, mut values) in values_by_table {
         values.sort();
         values.dedup();
         for chunk in values.chunks(batch_size) {
-            request_buffer.push(format!("INSERT {} VALUES {};", key, chunk.join(",")));
+            request_buffer.push(format!("INSERT {} VALUES {};", table, chunk.join(",")));
         }
     }
 
@@ -75,7 +74,7 @@ pub fn concat_requests(requests: Vec<String>, batch_size: usize) -> Vec<String> 
 
 impl BronzeBatch for Process {
     fn get_insert_header() -> String {
-        r#"INSERT INTO memory.bronze_process_list (pid, ppid, uid, lstart, pcpu, pmem, status, command, created_at, inserted_at, brz_ingestion_duration) VALUES "#
+        r#"INSERT INTO bronze_process_list (pid, ppid, uid, lstart, pcpu, pmem, status, command, created_at, inserted_at, brz_ingestion_duration) VALUES "#
             .to_string()
     }
 
@@ -96,7 +95,7 @@ impl BronzeBatch for Process {
 
 impl BronzeBatch for OpenFile {
     fn get_insert_header() -> String {
-        r#"INSERT INTO memory.bronze_open_files (command, pid, uid, fd, type, device, size, node, name, created_at, inserted_at, brz_ingestion_duration) VALUES "#
+        r#"INSERT INTO bronze_open_files (command, pid, uid, fd, type, device, size, node, name, created_at, inserted_at, brz_ingestion_duration) VALUES "#
             .to_string()
     }
 
@@ -122,7 +121,7 @@ impl Bronze for Capture {
         let clone = self.clone();
         let row_id = Uuid::new_v4().as_u128();
         let mut request_buffer = format!(
-            r#"INSERT OR REPLACE INTO memory.bronze_network_packet (
+            r#"INSERT OR REPLACE INTO bronze_network_packet (
             _id,
             interface,
             length,
@@ -183,7 +182,7 @@ fn device_addresses_to_sql(device: &Device) -> String {
         };
 
         request_buffer.push_str(&format!(
-            r#"INSERT OR IGNORE INTO memory.bronze_network_interface_address (
+            r#"INSERT OR IGNORE INTO bronze_network_interface_address (
                         interface,
                         address,
                         netmask,
@@ -254,7 +253,7 @@ impl Bronze for Application {
 
 fn bronze_ethernet(ethernet: Ethernet, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_ethernet (
+        r#"INSERT INTO bronze_network_ethernet (
                     packet_id,
                     source,
                     destination,
@@ -272,7 +271,7 @@ fn bronze_ethernet(ethernet: Ethernet, packet_id: u128) -> String {
 
 fn bronze_arp(arp: Arp, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_arp (
+        r#"INSERT INTO bronze_network_arp (
                     packet_id,
                     hardware_type,
                     protocol_type,
@@ -300,7 +299,7 @@ fn bronze_arp(arp: Arp, packet_id: u128) -> String {
 
 fn bronze_ipv4(ipv4: Ipv4, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_ipv4 (
+        r#"INSERT INTO bronze_network_ipv4 (
                     packet_id,
                     version,
                     header_length,
@@ -336,7 +335,7 @@ fn bronze_ipv4(ipv4: Ipv4, packet_id: u128) -> String {
 
 fn bronze_ipv6(ipv6: Ipv6, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_ipv6 (
+        r#"INSERT INTO bronze_network_ipv6 (
                     packet_id,
                     version,
                     traffic_class,
@@ -362,7 +361,7 @@ fn bronze_ipv6(ipv6: Ipv6, packet_id: u128) -> String {
 
 fn bronze_tcp(tcp: Tcp, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_tcp (
+        r#"INSERT INTO bronze_network_tcp (
                     packet_id,
                     source,
                     destination,
@@ -394,7 +393,7 @@ fn bronze_tcp(tcp: Tcp, packet_id: u128) -> String {
 
 fn bronze_udp(udp: Udp, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_udp (
+        r#"INSERT INTO bronze_network_udp (
                     packet_id,
                     source,
                     destination,
@@ -408,7 +407,7 @@ fn bronze_udp(udp: Udp, packet_id: u128) -> String {
 
 fn bronze_icmpv4(icmpv4: Icmp, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_icmp (
+        r#"INSERT INTO bronze_network_icmp (
                     packet_id,
                     version,
                     type,
@@ -427,7 +426,7 @@ fn bronze_icmpv4(icmpv4: Icmp, packet_id: u128) -> String {
 
 fn bronze_icmpv6(icmpv6: Icmpv6, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_icmp (
+        r#"INSERT INTO bronze_network_icmp (
                     packet_id,
                     version,
                     type,
@@ -448,7 +447,7 @@ fn bronze_icmpv6(icmpv6: Icmpv6, packet_id: u128) -> String {
 
 fn bronze_dns_header(dns: &Dns, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_dns_header (
+        r#"INSERT INTO bronze_network_dns_header (
                         packet_id,
                         id,
                         is_response,
@@ -490,7 +489,7 @@ fn bronze_dns_query(dns: &Dns, packet_id: u128) -> String {
     let mut request_buffer = String::new();
     if !dns.queries.is_empty() {
         request_buffer.push_str(
-            r#"INSERT INTO memory.bronze_network_dns_query (
+            r#"INSERT INTO bronze_network_dns_query (
                     packet_id,
                     qname,
                     qtype,
@@ -515,7 +514,7 @@ fn bronze_dns_record(dns: &Dns, packet_id: u128) -> String {
     let mut request_buffer = String::new();
     if !dns.responses.is_empty() || !dns.additional.is_empty() || !dns.authorities.is_empty() {
         request_buffer.push_str(
-            r#"INSERT INTO memory.bronze_network_dns_response (
+            r#"INSERT INTO bronze_network_dns_response (
                     packet_id,
                     origin,
                     name_tag,
@@ -595,7 +594,7 @@ fn bronze_http(http: Http, packet_id: u128) -> String {
         "NULL".to_string()
     };
     format!(
-        r#"INSERT INTO memory.bronze_network_http (
+        r#"INSERT INTO bronze_network_http (
                     packet_id,
                     type,
                     method,
@@ -621,7 +620,7 @@ fn bronze_http(http: Http, packet_id: u128) -> String {
 
 fn bronze_tls(tls: Tls, packet_id: u128) -> String {
     format!(
-        r#"INSERT INTO memory.bronze_network_tls (
+        r#"INSERT INTO bronze_network_tls (
                     packet_id,
                     content_type,
                     version,
@@ -771,8 +770,7 @@ mod tests {
     #[test]
     fn test_concat_requests_with_multiple_requests() {
         let requests = vec![
-            "INSERT INTO table1 VALUES (1, 'A'); INSERT INTO table1 VALUES (2, 'B');"
-                .to_string(),
+            "INSERT INTO table1 VALUES (1, 'A'); INSERT INTO table1 VALUES (2, 'B');".to_string(),
         ];
         let batch_size = 2;
         let result = concat_requests(requests, batch_size);
@@ -838,7 +836,7 @@ mod tests {
             .execute_batch(&create_insert_batch_request(processes))
             .unwrap();
         let mut statement = connection
-            .prepare("SELECT count(*) FROM memory.bronze_process_list;")
+            .prepare("SELECT count(*) FROM bronze_process_list;")
             .unwrap();
         let mut rows = statement.query([]).unwrap();
 
@@ -856,7 +854,7 @@ mod tests {
             .execute_batch(&create_insert_batch_request(processes))
             .unwrap();
         let mut statement = connection
-            .prepare("SELECT count(*) FROM memory.bronze_open_files;")
+            .prepare("SELECT count(*) FROM bronze_open_files;")
             .unwrap();
         let mut rows = statement.query([]).unwrap();
 

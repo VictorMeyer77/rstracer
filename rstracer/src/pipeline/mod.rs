@@ -2,7 +2,6 @@ use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
-use crate::pipeline::stage::schema::Schema;
 use crate::pipeline::stage::{dimension, gold, silver, vacuum};
 use chrono::Local;
 use lsof::lsof::{lsof, OpenFile};
@@ -26,6 +25,7 @@ pub async fn execute_request_task(
     config: &ChannelConfig,
     receiver_request: Receiver<String>,
     stop_flag: Arc<AtomicBool>,
+    in_memory: bool,
 ) -> Result<(), Error> {
     let mut receiver_request = receiver_request;
 
@@ -51,7 +51,7 @@ pub async fn execute_request_task(
                     config.consumer_batch_size
                 );
                 let start = Local::now().timestamp_millis();
-                execute_request(&request_buffer.join(" "))?;
+                execute_request(&request_buffer.join(""), in_memory)?;
                 let duration = Local::now().timestamp_millis() - start;
                 info!(
                     "batch execute sql requests in {} s",
@@ -69,10 +69,7 @@ pub async fn execute_request_task(
     Ok(())
 }
 
-fn get_schedule_request_task(
-    config: &Config,
-    schema: Schema,
-) -> Result<HashMap<(&str, String, u64), i64>, Error> {
+fn get_schedule_request_task(config: &Config) -> Result<HashMap<(&str, String, u64), i64>, Error> {
     let mut tasks: HashMap<(&str, String, u64), i64> = HashMap::new();
     tasks.insert(
         ("silver", silver::request(), config.schedule.silver),
@@ -85,7 +82,7 @@ fn get_schedule_request_task(
     tasks.insert(
         (
             "vacuum",
-            vacuum::request(config.vacuum.clone(), schema),
+            vacuum::request(config.vacuum.clone()),
             config.schedule.vacuum,
         ),
         Local::now().timestamp(),
@@ -103,16 +100,15 @@ fn get_schedule_request_task(
 
 pub async fn execute_schedule_request_task(
     config: &Config,
-    schema: Schema,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
-    let mut tasks = get_schedule_request_task(config, schema)?;
+    let mut tasks = get_schedule_request_task(config)?;
     while !stop_flag.load(Ordering::Relaxed) {
         for (task, executed_at) in tasks.iter_mut() {
             let now = Local::now().timestamp();
             if now > *executed_at + task.2 as i64 {
                 let start = Local::now().timestamp_millis();
-                execute_request(&task.1)?;
+                execute_request(&task.1, config.in_memory)?;
                 *executed_at = now;
                 let duration = Local::now().timestamp_millis() - start;
 

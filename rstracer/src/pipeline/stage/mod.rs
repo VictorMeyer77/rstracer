@@ -1,5 +1,4 @@
 pub mod bronze;
-pub mod copy;
 pub mod dimension;
 pub mod gold;
 pub mod schema;
@@ -13,9 +12,7 @@ pub mod tests {
 
     pub fn create_test_connection() -> Connection {
         let connection = Connection::open_in_memory().unwrap();
-        connection
-            .execute_batch(&create_schema_request("test.db"))
-            .unwrap();
+        connection.execute_batch(&create_schema_request()).unwrap();
         connection
     }
 }

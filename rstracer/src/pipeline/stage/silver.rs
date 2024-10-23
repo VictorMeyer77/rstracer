@@ -1,5 +1,5 @@
 const SILVER_PROCESS_LIST: &str = r#"
-INSERT OR IGNORE INTO memory.silver_process_list BY NAME
+INSERT OR IGNORE INTO silver_process_list BY NAME
 (
 SELECT
     _id,
@@ -16,12 +16,12 @@ SELECT
     AGE(created_at, lstart) AS duration,
     CURRENT_TIMESTAMP AS inserted_at,
     AGE(inserted_at) AS svr_ingestion_duration
-FROM memory.bronze_process_list
+FROM bronze_process_list
 );
 "#;
 
 const SILVER_OPEN_FILES: &str = r#"
-INSERT OR IGNORE INTO memory.silver_open_files BY NAME
+INSERT OR IGNORE INTO silver_open_files BY NAME
 (
 SELECT
     _id,
@@ -55,13 +55,13 @@ FROM
         REGEXP_EXTRACT(SPLIT_PART(name, '->', 2), '^([a-zA-Z0-9\-\.\*\:\[\]]+):([a-zA-Z0-9\-\.\*\:\[\]]+)$', 2) AS ip_destination_port,
         CURRENT_TIMESTAMP AS inserted_at,
         AGE(inserted_at) AS svr_ingestion_duration
-    FROM memory.bronze_open_files
+    FROM bronze_open_files
     )
 );
 "#;
 
 const SILVER_NETWORK_PACKET: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_packet BY NAME
+INSERT OR IGNORE INTO silver_network_packet BY NAME
 (
     SELECT
         packet._id,
@@ -93,22 +93,22 @@ INSERT OR IGNORE INTO memory.silver_network_packet BY NAME
         END AS application,
         CURRENT_TIMESTAMP AS inserted_at,
         AGE(packet.inserted_at) AS svr_ingestion_duration
-    FROM memory.bronze_network_packet packet
-    LEFT JOIN memory.bronze_network_ethernet ethernet ON packet._id = ethernet.packet_id
-    LEFT JOIN memory.bronze_network_ipv4 ipv4 ON packet._id = ipv4.packet_id
-    LEFT JOIN memory.bronze_network_ipv6 ipv6 ON packet._id = ipv6.packet_id
-    LEFT JOIN memory.bronze_network_arp arp ON packet._id = arp.packet_id
-    LEFT JOIN memory.bronze_network_tcp tcp ON packet._id = tcp.packet_id
-    LEFT JOIN memory.bronze_network_udp udp ON packet._id = udp.packet_id
-    LEFT JOIN memory.bronze_network_icmp icmp ON packet._id = icmp.packet_id
-    LEFT JOIN memory.bronze_network_dns_header dns ON packet._id = dns.packet_id
-    LEFT JOIN memory.bronze_network_tls tls ON packet._id = tls.packet_id
-    LEFT JOIN memory.bronze_network_http http ON packet._id = http.packet_id
+    FROM bronze_network_packet packet
+    LEFT JOIN bronze_network_ethernet ethernet ON packet._id = ethernet.packet_id
+    LEFT JOIN bronze_network_ipv4 ipv4 ON packet._id = ipv4.packet_id
+    LEFT JOIN bronze_network_ipv6 ipv6 ON packet._id = ipv6.packet_id
+    LEFT JOIN bronze_network_arp arp ON packet._id = arp.packet_id
+    LEFT JOIN bronze_network_tcp tcp ON packet._id = tcp.packet_id
+    LEFT JOIN bronze_network_udp udp ON packet._id = udp.packet_id
+    LEFT JOIN bronze_network_icmp icmp ON packet._id = icmp.packet_id
+    LEFT JOIN bronze_network_dns_header dns ON packet._id = dns.packet_id
+    LEFT JOIN bronze_network_tls tls ON packet._id = tls.packet_id
+    LEFT JOIN bronze_network_http http ON packet._id = http.packet_id
 );
 "#;
 
 const SILVER_NETWORK_ETHERNET: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_ethernet BY NAME
+INSERT OR IGNORE INTO silver_network_ethernet BY NAME
 (
 SELECT
 	ethernet.packet_id AS _id,
@@ -122,12 +122,12 @@ SELECT
 	packet.brz_ingestion_duration,
 	CURRENT_TIMESTAMP AS inserted_at,
 	AGE(packet.inserted_at) AS svr_ingestion_duration
-FROM memory.bronze_network_ethernet ethernet LEFT JOIN memory.bronze_network_packet packet ON ethernet.packet_id = packet._id
+FROM bronze_network_ethernet ethernet LEFT JOIN bronze_network_packet packet ON ethernet.packet_id = packet._id
 );
 "#;
 
 const SILVER_NETWORK_INTERFACE_ADDRESS: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_interface_address BY NAME
+INSERT OR IGNORE INTO silver_network_interface_address BY NAME
 (
 SELECT
     _id,
@@ -137,12 +137,12 @@ SELECT
     destination_address::INET AS destination_address,
     CURRENT_TIMESTAMP AS inserted_at,
     AGE(inserted_at) AS svr_ingestion_duration
-FROM memory.bronze_network_interface_address
+FROM bronze_network_interface_address
 );
 "#;
 
 const SILVER_NETWORK_DNS: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_dns BY NAME
+INSERT OR IGNORE INTO silver_network_dns BY NAME
 (
 SELECT
     CONCAT_WS('-', CAST(header._id AS TEXT), CAST(query._id AS VARCHAR), CAST(response._id AS VARCHAR)) AS _id,
@@ -240,7 +240,7 @@ LEFT JOIN
 "#;
 
 const SILVER_NETWORK_IP: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_ip BY NAME
+INSERT OR IGNORE INTO silver_network_ip BY NAME
 (
 SELECT
     ip._id,
@@ -266,7 +266,7 @@ FROM
         next_level_protocol AS next_protocol,
         source::INET AS source,
         destination::INET AS destination
-    FROM memory.bronze_network_ipv4
+    FROM bronze_network_ipv4
     UNION ALL
     SELECT
         packet_id AS _id,
@@ -276,13 +276,13 @@ FROM
         next_header AS next_protocol,
         source,
         destination
-    FROM memory.bronze_network_ipv6
-) ip LEFT JOIN memory.bronze_network_packet packet ON ip._id = packet._id
+    FROM bronze_network_ipv6
+) ip LEFT JOIN bronze_network_packet packet ON ip._id = packet._id
 );
 "#;
 
 const SILVER_NETWORK_TRANSPORT: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_transport BY NAME
+INSERT OR IGNORE INTO silver_network_transport BY NAME
 (
 SELECT
     transport.*,
@@ -299,20 +299,20 @@ FROM
         'TCP' AS protocol,
         source,
         destination
-    FROM memory.bronze_network_tcp
+    FROM bronze_network_tcp
 	UNION ALL
 	SELECT
 		packet_id AS _id,
 		'UDP' AS protocol,
 		source,
 		destination
-	FROM memory.bronze_network_udp
-) transport LEFT JOIN memory.bronze_network_packet packet ON transport._id = packet._id
+	FROM bronze_network_udp
+) transport LEFT JOIN bronze_network_packet packet ON transport._id = packet._id
 );
 "#;
 
 const SILVER_NETWORK_ARP: &str = r#"
-INSERT OR IGNORE INTO memory.silver_network_arp BY NAME
+INSERT OR IGNORE INTO silver_network_arp BY NAME
 (
 SELECT
     arp.packet_id AS _id,
@@ -331,7 +331,7 @@ SELECT
     packet.brz_ingestion_duration,
     CURRENT_TIMESTAMP AS inserted_at,
     AGE(packet.inserted_at) AS svr_ingestion_duration
-FROM memory.bronze_network_arp arp LEFT JOIN memory.bronze_network_packet packet ON arp.packet_id = packet._id
+FROM bronze_network_arp arp LEFT JOIN bronze_network_packet packet ON arp.packet_id = packet._id
 );
 "#;
 

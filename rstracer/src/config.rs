@@ -7,13 +7,11 @@ const CONFIG_FILE_PATH: &str = "rstracer.toml";
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct Config {
-    pub disk_file_path: String,
+    pub in_memory: bool,
     pub request: ChannelConfig,
     pub ps: ChannelConfig,
     pub lsof: ChannelConfig,
     pub network: ChannelConfig,
-    pub persist_layer: CopyConfig,
-    pub load_layer: CopyConfig,
     pub vacuum: VacuumConfig,
     pub schedule: ScheduleConfig,
 }
@@ -23,23 +21,6 @@ pub struct ChannelConfig {
     pub channel_size: usize,
     pub producer_frequency: Option<u64>,
     pub consumer_batch_size: usize,
-}
-
-#[derive(Debug, Deserialize, Clone)]
-pub struct CopyConfig {
-    pub bronze: bool,
-    pub silver: bool,
-    pub gold: bool,
-}
-
-impl CopyConfig {
-    pub fn to_list(&self) -> Vec<(String, bool)> {
-        vec![
-            ("bronze".to_string(), self.bronze),
-            ("silver".to_string(), self.silver),
-            ("gold".to_string(), self.gold),
-        ]
-    }
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -80,19 +61,11 @@ impl ScheduleConfig {
 
 pub fn read_config() -> Result<Config, Error> {
     let mut config = config::Config::builder()
-        .set_default("disk_file_path", "rstracer.db")?
-        // persist_layer
-        .set_default("persist_layer.bronze", true)?
-        .set_default("persist_layer.silver", true)?
-        .set_default("persist_layer.gold", true)?
-        // load_layer
-        .set_default("load_layer.bronze", false)?
-        .set_default("load_layer.silver", false)?
-        .set_default("load_layer.gold", false)?
+        .set_default("in_memory", "false")?
         // vacuum
-        .set_default("vacuum.bronze", 15)?
-        .set_default("vacuum.silver", 15)?
-        .set_default("vacuum.gold", 0)?
+        .set_default("vacuum.bronze", 30)?
+        .set_default("vacuum.silver", 30)?
+        .set_default("vacuum.gold", 600)?
         // schedule
         .set_default("schedule.silver", 10)?
         .set_default("schedule.gold", 10)?
