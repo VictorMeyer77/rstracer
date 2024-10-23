@@ -2,6 +2,7 @@ use rstracer::start;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::{join, signal};
+use tracing::Level;
 
 #[tokio::main]
 async fn main() {
@@ -11,6 +12,7 @@ async fn main() {
         .with_line_number(true)
         .with_thread_ids(true)
         .with_target(false)
+        .with_max_level(Level::INFO)
         .init();
 
     let stop_flag = Arc::new(AtomicBool::new(false));
@@ -19,7 +21,7 @@ async fn main() {
     let main_task = tokio::spawn(async move { start(stop_flag_clone).await });
 
     let stop_task = tokio::spawn(async move {
-        signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
+        signal::ctrl_c().await.unwrap();
         stop_flag.store(true, Ordering::Release);
     });
 

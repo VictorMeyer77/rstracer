@@ -2,6 +2,7 @@ use crate::pipeline::error::Error;
 use duckdb::Connection;
 use lazy_static::lazy_static;
 use std::sync::Mutex;
+use tracing::info;
 
 const DATABASE_FILE_PATH: &str = "rstracer.db";
 
@@ -24,5 +25,7 @@ pub fn execute_request(request: &str, in_memory: bool) -> Result<(), Error> {
 }
 
 pub fn close_connection(in_memory: bool) -> Result<(), Error> {
-    execute_request("CHECKPOINT;", in_memory)
+    execute_request("CHECKPOINT;", in_memory)?;
+    info!("database connection close gracefully");
+    Ok(())
 }
