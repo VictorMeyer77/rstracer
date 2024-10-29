@@ -1,4 +1,4 @@
-use rstracer::start;
+use rstracer::run;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
 use tokio::{join, signal};
@@ -18,7 +18,7 @@ async fn main() {
     let stop_flag = Arc::new(AtomicBool::new(false));
     let stop_flag_clone = stop_flag.clone();
 
-    let main_task = tokio::spawn(async move { start(stop_flag_clone).await });
+    let main_task = tokio::spawn(async move { run(stop_flag_clone).await });
 
     let stop_task = tokio::spawn(async move {
         signal::ctrl_c().await.unwrap();

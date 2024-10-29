@@ -35,7 +35,7 @@ pub async fn execute_request_task(
         info!(
             "sql request receiver contains {} / {} elements",
             receiver_request.len(),
-            config.channel_size
+            config.channel_size.unwrap()
         );
 
         match timeout(

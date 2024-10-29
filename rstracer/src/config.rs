@@ -18,7 +18,7 @@ pub struct Config {
 
 #[derive(Debug, Deserialize, Clone)]
 pub struct ChannelConfig {
-    pub channel_size: usize,
+    pub channel_size: Option<usize>,
     pub producer_frequency: Option<u64>,
     pub consumer_batch_size: usize,
 }
@@ -63,8 +63,8 @@ pub fn read_config() -> Result<Config, Error> {
     let mut config = config::Config::builder()
         .set_default("in_memory", "false")?
         // vacuum
-        .set_default("vacuum.bronze", 30)?
-        .set_default("vacuum.silver", 30)?
+        .set_default("vacuum.bronze", 15)?
+        .set_default("vacuum.silver", 15)?
         .set_default("vacuum.gold", 600)?
         // schedule
         .set_default("schedule.silver", 10)?
@@ -75,11 +75,9 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("request.channel_size", 100)?
         .set_default("request.consumer_batch_size", 20)?
         // ps
-        .set_default("ps.channel_size", 500)?
         .set_default("ps.producer_frequency", 3)?
         .set_default("ps.consumer_batch_size", 200)?
         // lsof
-        .set_default("lsof.channel_size", 1000)?
         .set_default("lsof.producer_frequency", 15)?
         .set_default("lsof.consumer_batch_size", 200)?
         // network

@@ -17,14 +17,14 @@ use tracing::error;
 pub mod config;
 pub mod pipeline;
 
-pub async fn start(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
+pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let config = read_config()?;
     execute_request(&create_schema_request(), config.in_memory)?;
 
     let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =
-        channel(config.request.channel_size);
+        channel(config.request.channel_size.unwrap());
     let (sender_capture, receiver_capture): (Sender<Capture>, Receiver<Capture>) =
-        channel(config.network.channel_size);
+        channel(config.network.channel_size.unwrap());
 
     let execute_schedule_request_task = start_schedule_request_task(&config, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);

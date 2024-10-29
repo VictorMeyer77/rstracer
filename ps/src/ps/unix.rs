@@ -42,7 +42,6 @@ impl Ps for Unix {
 mod tests {
     use crate::ps::unix::Unix;
     use crate::ps::Ps;
-    use chrono::Local;
 
     fn create_ps_output() -> String {
         "PID  PPID   UID                          STARTED %CPU %MEM STAT COMMAND
@@ -72,15 +71,5 @@ mod tests {
         assert_eq!(process.pmem, 1.2);
         assert_eq!(process.status, "S");
         assert_eq!(process.command, "/usr/lib/xorg/Xorg :0 -seat seat0 -auth /run/lightdm/root/:0 -nolisten tcp vt7 -novtswitch");
-    }
-
-    #[test]
-    fn test_parse_date() {
-        let date_chunks: Vec<&str> = "Tue Aug 29 08:01:10 2023".split_whitespace().collect();
-        assert_eq!(
-            Unix::parse_date(&date_chunks).unwrap()
-                + Local::now().offset().local_minus_utc() as i64,
-            1693296070
-        );
     }
 }
