@@ -2,7 +2,7 @@
 
 members = [
     "etc",
-    "logs",
+     # "logs", not used
     "lsof",
     "network",
     "ps",
