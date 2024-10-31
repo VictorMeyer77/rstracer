@@ -1,4 +1,5 @@
 [workspace]
+resolver = "2"
 
 members = [
     "etc",
@@ -8,3 +9,16 @@ members = [
     "ps",
     "rstracer"
 ]
+
+
+[workspace.package]
+version = "0.1.0"
+authors = ["victor meyer <victormeyerc2i@gmail.com>"]
+edition = "2021"
+repository = "https://github.com/VictorMeyer77/rstracer"
+homepage = "https://github.com/VictorMeyer77/rstracer"
+documentation = "https://github.com/VictorMeyer77/rstracer"
+readme = "README.md"
+keywords = ["duckdb", "network"]
+license = "MIT"
+categories = ["command-line-utilities", "network-programming", "asynchronous"]
