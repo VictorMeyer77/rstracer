@@ -10,7 +10,6 @@ members = [
     "rstracer"
 ]
 
-
 [workspace.package]
 version = "0.1.0"
 authors = ["victor meyer <victormeyerc2i@gmail.com>"]
