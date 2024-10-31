@@ -69,7 +69,7 @@ sudo target/release/rstracer
 
 ## Configuration
 
-A default configuration is automatically applied if a `_rstracer.toml` file
+A default configuration is automatically applied if a `rstracer.toml` file
 is not found in the working directory.
 
 Refer to the [rstracer.toml](rstracer/rstracer.toml) file for customizable options.
