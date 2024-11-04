@@ -12,7 +12,6 @@ INSERT INTO gold_process_list BY NAME
         MIN(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS min_pmem,
         MAX(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS max_pmem,
         pmem AS last_pmem,
-        _id AS silver_id,
         lstart AS started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
@@ -47,7 +46,6 @@ INSERT INTO gold_open_files_regular BY NAME
         MIN(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS min_size,
         MAX(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS max_size,
         SIZE AS last_size,
-        _id AS silver_id,
         created_at AS started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
@@ -80,7 +78,6 @@ INSERT OR REPLACE INTO gold_open_files_network BY NAME
         source_port,
         destination_address,
         destination_port,
-        silver_id,
         created_at AS started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
@@ -106,8 +103,7 @@ INSERT OR REPLACE INTO gold_open_files_network BY NAME
                 WHEN ofn.ip_destination_port IN ('*', '') THEN NULL
                 ELSE COALESCE(ser2.port::TEXT, ofn.ip_destination_port)
             END AS destination_port,
-            ofn.created_at,
-            ofn._id AS silver_id
+            ofn.created_at
         FROM
         (
             SELECT
@@ -164,7 +160,7 @@ const GOLD_PROCESS_NETWORK: &str = r#"
 INSERT OR REPLACE INTO gold_process_network BY NAME
 (
     SELECT DISTINCT
-        HASH(pro.silver_id, ofn.silver_id, net._id) AS _id,
+        HASH(pro.pid, net._id) AS _id,
         pro.pid,
         pro.uid,
         ofn.command,
@@ -173,8 +169,6 @@ INSERT OR REPLACE INTO gold_process_network BY NAME
         net.destination_address,
         net.destination_port,
         net.is_source,
-        pro.silver_id AS process_svr_id,
-        ofn.silver_id AS open_file_svr_id,
         net._id AS packet_id,
         CURRENT_TIMESTAMP AS inserted_at,
     FROM gold_process_list pro

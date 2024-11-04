@@ -476,7 +476,6 @@ CREATE TABLE IF NOT EXISTS gold_process_list (
     min_pmem FLOAT,
     max_pmem FLOAT,
     last_pmem FLOAT,
-    silver_id BIGINT,
     started_at TIMESTAMP,
     inserted_at TIMESTAMP,
     PRIMARY KEY (pid, started_at)
@@ -494,7 +493,6 @@ CREATE TABLE IF NOT EXISTS gold_open_files_regular (
     min_size BIGINT,
     max_size BIGINT,
     last_size BIGINT,
-    silver_id INTEGER,
     started_at TIMESTAMP,
     inserted_at TIMESTAMP,
     PRIMARY KEY (pid, fd, node)
@@ -511,7 +509,6 @@ CREATE TABLE IF NOT EXISTS gold_open_files_network (
     source_port USMALLINT,
     destination_address TEXT,
     destination_port USMALLINT,
-    silver_id INTEGER,
     started_at TIMESTAMP,
     inserted_at TIMESTAMP
 );
