@@ -2,7 +2,7 @@ use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
-use crate::pipeline::stage::{dimension, gold, silver, vacuum};
+use crate::pipeline::stage::{file, gold, silver, vacuum};
 use chrono::Local;
 use lsof::lsof::{lsof, OpenFile};
 use network::capture::Capture;
@@ -87,14 +87,7 @@ fn get_schedule_request_task(config: &Config) -> Result<HashMap<(&str, String, u
         ),
         Local::now().timestamp(),
     );
-    tasks.insert(
-        (
-            "dimension",
-            dimension::request()?,
-            config.schedule.dimension,
-        ),
-        0,
-    );
+    tasks.insert(("file", file::request()?, config.schedule.file), 0);
     Ok(tasks)
 }
 

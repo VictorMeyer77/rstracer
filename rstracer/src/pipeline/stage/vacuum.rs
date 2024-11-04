@@ -8,7 +8,7 @@ pub fn request(config: VacuumConfig) -> String {
         for layer in config.to_list() {
             if table.starts_with(&layer.0)
                 && layer.1 > 0
-                && !table.contains("_dim_")
+                && !table.contains("_file_")
                 && !table.contains("_tech_")
             {
                 query.push_str(&format!(
@@ -33,7 +33,7 @@ mod tests {
             gold: 1000,
         };
         let request = request(vacuum_config);
-        assert!(!request.contains("_dim_"));
+        assert!(!request.contains("_file_"));
         assert!(!request.contains("_tech_"));
         assert_eq!(request.matches("DELETE FROM").count(), 32);
         assert!(request.contains(

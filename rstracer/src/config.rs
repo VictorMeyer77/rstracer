@@ -45,7 +45,7 @@ pub struct ScheduleConfig {
     pub silver: u64,
     pub gold: u64,
     pub vacuum: u64,
-    pub dimension: u64,
+    pub file: u64,
 }
 
 impl ScheduleConfig {
@@ -54,7 +54,7 @@ impl ScheduleConfig {
             ("silver".to_string(), self.silver),
             ("gold".to_string(), self.gold),
             ("vacuum".to_string(), self.vacuum),
-            ("dimension".to_string(), self.dimension),
+            ("file".to_string(), self.file),
         ]
     }
 }
@@ -70,7 +70,7 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("schedule.silver", 10)?
         .set_default("schedule.gold", 10)?
         .set_default("schedule.vacuum", 15)?
-        .set_default("schedule.dimension", 300)?
+        .set_default("schedule.file", 300)?
         // request
         .set_default("request.channel_size", 100)?
         .set_default("request.consumer_batch_size", 20)?

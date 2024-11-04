@@ -4,8 +4,8 @@ use etc::etc::service::Service;
 use etc::etc::EtcReader;
 
 fn insert_services_request() -> Result<String, Error> {
-    let request_buffer = r#"BEGIN; TRUNCATE gold_dim_services;
-    INSERT INTO gold_dim_services (name, port, protocol, inserted_at) VALUES "#
+    let request_buffer = r#"BEGIN; TRUNCATE gold_file_service;
+    INSERT INTO gold_file_service (name, port, protocol, inserted_at) VALUES "#
         .to_string();
 
     let insert_values: Vec<String> = Service::read_etc_file(None)?
@@ -26,8 +26,8 @@ fn insert_services_request() -> Result<String, Error> {
 }
 
 fn insert_hosts_request() -> Result<String, Error> {
-    let request_buffer = r#"BEGIN; TRUNCATE gold_dim_hosts;
-    INSERT INTO gold_dim_hosts (name, address, inserted_at) VALUES "#
+    let request_buffer = r#"BEGIN; TRUNCATE gold_file_host;
+    INSERT INTO gold_file_host (name, address, inserted_at) VALUES "#
         .to_string();
 
     let insert_values: Vec<String> = Host::read_etc_file(None)?

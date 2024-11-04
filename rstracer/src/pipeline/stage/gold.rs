@@ -116,10 +116,10 @@ INSERT OR REPLACE INTO gold_open_files_network BY NAME
             FROM silver_open_files
             WHERE UPPER(type) IN ('IPV4', 'IPV6')
         ) ofn
-        LEFT JOIN gold_dim_hosts hos1 ON LOWER(ofn.ip_source_address) = LOWER(hos1.name)
-        LEFT JOIN gold_dim_hosts hos2 ON LOWER(ofn.ip_destination_address) = LOWER(hos2.name)
-        LEFT JOIN gold_dim_services ser1 ON LOWER(ofn.ip_source_port) = LOWER(ser1.name)
-        LEFT JOIN gold_dim_services ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
+        LEFT JOIN gold_file_host hos1 ON LOWER(ofn.ip_source_address) = LOWER(hos1.name)
+        LEFT JOIN gold_file_host hos2 ON LOWER(ofn.ip_destination_address) = LOWER(hos2.name)
+        LEFT JOIN gold_file_service ser1 ON LOWER(ofn.ip_source_port) = LOWER(ser1.name)
+        LEFT JOIN gold_file_service ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
         WHERE ofn.row_num = 1
     )
 );"#;
@@ -268,8 +268,8 @@ INSERT INTO gold_tech_table_count BY NAME
     SELECT 29 AS _id, 'gold_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_network_ip UNION
     SELECT 30 AS _id, 'gold_process_command' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_process_command UNION
     SELECT 31 AS _id, 'gold_process_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_process_network UNION
-    SELECT 32 AS _id, 'gold_dim_hosts' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_hosts UNION
-    SELECT 33 AS _id, 'gold_dim_services' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_services
+    SELECT 32 AS _id, 'gold_file_host' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_host UNION
+    SELECT 33 AS _id, 'gold_file_service' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_service
 )
 ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at,

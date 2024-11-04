@@ -441,10 +441,10 @@ CREATE TABLE IF NOT EXISTS silver_network_arp (
 );
 "#;
 
-// DIM
+// GOLD FILE
 
-const GOLD_DIM_SERVICES: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_dim_services (
+const GOLD_FILE_SERVICE: &str = r#"
+CREATE TABLE IF NOT EXISTS gold_file_service (
     name TEXT,
     port USMALLINT,
     protocol TEXT,
@@ -453,8 +453,8 @@ CREATE TABLE IF NOT EXISTS gold_dim_services (
 );
 "#;
 
-const GOLD_DIM_HOSTS: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_dim_hosts (
+const GOLD_FILE_HOST: &str = r#"
+CREATE TABLE IF NOT EXISTS gold_file_host (
     name TEXT,
     address TEXT,
     inserted_at TIMESTAMP,
@@ -625,8 +625,8 @@ pub fn create_schema_request() -> String {
         SILVER_NETWORK_IP,
         SILVER_NETWORK_TRANSPORT,
         SILVER_NETWORK_ARP,
-        GOLD_DIM_SERVICES,
-        GOLD_DIM_HOSTS,
+        GOLD_FILE_SERVICE,
+        GOLD_FILE_HOST,
         GOLD_PROCESS_LIST,
         GOLD_OPEN_FILES_REGULAR,
         GOLD_OPEN_FILES_NETWORK,

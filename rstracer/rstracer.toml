@@ -22,17 +22,17 @@ gold = 600    # Retention period in seconds for gold layer
 
 # [Scheduling Tasks]
 # Once data from the `ps`, `lsof`, and network packet commands is inserted into the bronze layer,
-# scheduled tasks are executed periodically for silver, gold, vacuum, and dimension tasks.
+# scheduled tasks are executed periodically for silver, gold, vacuum, and file tasks.
 # - **Silver**: Extracts, transforms, and loads (ETL) data from the bronze layer.
 # - **Gold**: ETL process from the silver layer.
 # - **Vacuum**: Executes the vacuum tasks as defined above.
-# - **Dimension**: Dimension tables contain auxiliary information such as data from `/etc/hosts` or `/etc/services`.
+# - **File**: File tables contain auxiliary information such as data from `/etc/hosts` or `/etc/services`.
 #   They are loaded at the beginning of the run and don’t need regular updates.
 [schedule]
 silver = 5        # Frequency in seconds to run the silver task
 gold = 5          # Frequency in seconds to run the gold task
 vacuum = 15       # Frequency in seconds to run the vacuum task
-dimension = 300   # Frequency in seconds to run the dimension task
+file = 300        # Frequency in seconds to run the file task
 
 # [Request Channel]
 # DuckDB does not allow concurrent writes. All requests are queued in a channel, which is processed sequentially
