@@ -8,7 +8,7 @@ pub fn request(config: VacuumConfig) -> String {
         for layer in config.to_list() {
             if table.starts_with(&layer.0)
                 && layer.1 > 0
-                && !table.contains("_file_")
+                && !table.contains("gold_file_")
                 && !table.contains("_tech_")
             {
                 query.push_str(&format!(
@@ -33,9 +33,10 @@ mod tests {
             gold: 1000,
         };
         let request = request(vacuum_config);
-        assert!(!request.contains("_file_"));
+        println!("{:?}", request);
+        assert!(!request.contains("gold_file_"));
         assert!(!request.contains("_tech_"));
-        assert_eq!(request.matches("DELETE FROM").count(), 32);
+        assert_eq!(request.matches("DELETE FROM").count(), 36);
         assert!(request.contains(
             "DELETE FROM bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP"
         ));
@@ -43,7 +44,7 @@ mod tests {
             "DELETE FROM silver_process_list WHERE inserted_at + '30 seconds' < CURRENT_TIMESTAMP"
         ));
         assert!(request.contains(
-            "DELETE FROM gold_process_list WHERE inserted_at + '1000 seconds' < CURRENT_TIMESTAMP"
+            "DELETE FROM gold_fact_process WHERE inserted_at + '1000 seconds' < CURRENT_TIMESTAMP"
         ));
     }
 

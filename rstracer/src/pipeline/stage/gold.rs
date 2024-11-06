@@ -1,58 +1,53 @@
-const GOLD_PROCESS_LIST: &str = r#"
-INSERT INTO gold_process_list BY NAME
+const GOLD_DIM_PROCESS: &str = r#"
+INSERT OR REPLACE INTO gold_dim_process BY NAME
 (
     SELECT
         pid,
         ppid,
         uid,
         command,
-        MIN(pcpu) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS min_pcpu,
-        MAX(pcpu) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS max_pcpu,
-        pcpu AS last_pcpu,
-        MIN(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS min_pmem,
-        MAX(pmem) OVER (PARTITION BY pid, lstart ORDER BY row_num) AS max_pmem,
-        pmem AS last_pmem,
-        lstart AS started_at,
+        full_command,
+        started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
     (
         SELECT
-            *,
-            row_number() OVER (PARTITION BY pid, lstart ORDER BY inserted_at DESC) AS row_num
-        FROM silver_process_list
+            pro.pid,
+            pro.ppid,
+            pro.uid,
+            ofn.command AS command,
+            pro.command AS full_command,
+            pro.lstart AS started_at,
+            row_number() OVER (PARTITION BY pro.pid, pro.lstart ORDER BY pro.inserted_at DESC) AS row_num
+        FROM silver_process_list pro
+        LEFT JOIN silver_open_files ofn ON pro.pid = ofn.pid
     )
     WHERE ROW_NUM = 1
-)
-ON CONFLICT DO UPDATE SET
-    inserted_at = EXCLUDED.inserted_at,
-    last_pcpu = EXCLUDED.last_pcpu,
-    min_pcpu = LEAST(min_pcpu, EXCLUDED.min_pcpu),
-    max_pcpu = GREATEST(max_pcpu, EXCLUDED.max_pcpu),
-    last_pmem = EXCLUDED.last_pmem,
-    min_pmem = LEAST(min_pmem, EXCLUDED.min_pmem),
-    max_pmem = GREATEST(max_pmem, EXCLUDED.max_pmem)
-;"#;
+);"#;
 
-const GOLD_OPEN_FILES_REGULAR: &str = r#"
-INSERT INTO gold_open_files_regular BY NAME
+const GOLD_DIM_FILE_REG: &str = r#"
+INSERT INTO gold_dim_file_reg BY NAME
 (
     SELECT
         pid,
         uid,
-        name,
         fd,
         node,
         command,
-        MIN(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS min_size,
-        MAX(size) OVER (PARTITION BY pid, fd, node ORDER BY row_num) AS max_size,
-        SIZE AS last_size,
-        created_at AS started_at,
+        name,
+        started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
         (
             SELECT
-                *,
-                ROW_NUMBER() OVER (PARTITION BY pid, fd, node ORDER BY created_at DESC) AS row_num
+                pid,
+                uid,
+                fd,
+                node,
+                command,
+                name,
+                created_at AS started_at,
+                ROW_NUMBER() OVER (PARTITION BY pid, fd, node ORDER BY created_at ASC) AS row_num
             FROM
                 silver_open_files
             WHERE UPPER(type) NOT IN ('IPV4', 'IPV6')
@@ -60,68 +55,255 @@ INSERT INTO gold_open_files_regular BY NAME
     WHERE row_num = 1
 )
 ON CONFLICT DO UPDATE SET
-    inserted_at = EXCLUDED.inserted_at,
-    last_size = EXCLUDED.last_size,
-    min_size = LEAST(min_size, EXCLUDED.min_size),
-    max_size = GREATEST(max_size, EXCLUDED.max_size)
+    inserted_at = EXCLUDED.inserted_at
 ;"#;
 
-const GOLD_OPEN_FILES_NETWORK: &str = r#"
-INSERT OR REPLACE INTO gold_open_files_network BY NAME
+const GOLD_DIM_NETWORK_SOCKET: &str = r#"
+INSERT INTO gold_dim_network_socket BY NAME
 (
-    SELECT DISTINCT
-        HASH(pid, fd, source_address, source_port, destination_address, destination_port) AS _id,
+     SELECT
+        HASH(pid, source_address, source_port, destination_address, destination_port) AS _id,
         pid,
         uid,
         command,
         source_address::INET AS source_address,
-        source_port,
+        source_port::USMALLINT AS source_port,
         destination_address,
-        destination_port,
+        destination_port::USMALLINT AS destination_port,
         created_at AS started_at,
         CURRENT_TIMESTAMP AS inserted_at
     FROM
     (
         SELECT
-            ofn.pid,
-            ofn.uid,
-            ofn.fd,
-            ofn.command,
+        *
+        FROM
+        (
+            SELECT
+	            ofn.pid,
+	            ofn.uid,
+	            ofn.command,
+	            CASE
+	                WHEN ofn.ip_source_address = '*' THEN NULL
+	                ELSE REPLACE(COALESCE(hos1.address, ofn.ip_source_address), '-', ':')
+	            END AS source_address,
+	            CASE
+	                WHEN ofn.ip_source_port IN ('*', '') THEN NULL
+	                ELSE COALESCE(ser1.port::TEXT, ofn.ip_source_port)
+	            END AS source_port,
+	            CASE
+	                WHEN ofn.ip_destination_address IN ('*', '') THEN NULL
+	                ELSE COALESCE(hos2.address, ofn.ip_destination_address)
+	            END AS destination_address,
+	            CASE
+	                WHEN ofn.ip_destination_port IN ('*', '') THEN NULL
+	                ELSE COALESCE(ser2.port::TEXT, ofn.ip_destination_port)
+	            END AS destination_port,
+	            ofn.created_at,
+                ROW_NUMBER() OVER (PARTITION BY pid, ip_source_address, ip_source_port, ip_destination_address, ip_destination_port ORDER BY created_at ASC) AS row_num
+            FROM silver_open_files ofn
+	        LEFT JOIN gold_file_host hos1 ON LOWER(ofn.ip_source_address) = LOWER(hos1.name)
+	        LEFT JOIN gold_file_host hos2 ON LOWER(ofn.ip_destination_address) = LOWER(hos2.name)
+	        LEFT JOIN gold_file_service ser1 ON LOWER(ofn.ip_source_port) = LOWER(ser1.name)
+	        LEFT JOIN gold_file_service ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
+            WHERE UPPER(ofn.type) IN ('IPV4', 'IPV6')
+        )
+        WHERE row_num = 1
+    )
+)
+ON CONFLICT DO UPDATE SET
+    inserted_at = EXCLUDED.inserted_at;
+;"#;
+
+const GOLD_DIM_NETWORK_OPEN_PORT: &str = r#"
+INSERT INTO gold_dim_network_open_port BY NAME
+(
+    SELECT
+        pid,
+        uid,
+        command,
+        port::USMALLINT AS port,
+        created_at AS started_at,
+        CURRENT_TIMESTAMP AS inserted_at
+    FROM
+    (
+        SELECT
+            pid,
+            uid,
+            command,
             CASE
-                WHEN ofn.ip_source_address = '*' THEN NULL
-                ELSE REPLACE(COALESCE(hos1.address, ofn.ip_source_address), '-', ':')
-            END AS source_address,
-            CASE
-                WHEN ofn.ip_source_port IN ('*', '') THEN NULL
-                ELSE COALESCE(ser1.port::TEXT, ofn.ip_source_port)
-            END AS source_port,
-            CASE
-                WHEN ofn.ip_destination_address = '*' THEN NULL
-                ELSE COALESCE(hos2.address, ofn.ip_destination_address)
-            END AS destination_address,
-            CASE
-                WHEN ofn.ip_destination_port IN ('*', '') THEN NULL
-                ELSE COALESCE(ser2.port::TEXT, ofn.ip_destination_port)
-            END AS destination_port,
-            ofn.created_at
+                WHEN sof.ip_source_port IN ('*', '') THEN NULL
+                ELSE COALESCE(ser.port::TEXT, sof.ip_source_port)
+            END AS port,
+            created_at,
+            ROW_NUMBER() OVER (PARTITION BY pid, port ORDER BY created_at ASC) AS row_num
+        FROM silver_open_files sof
+        LEFT JOIN gold_file_service ser ON LOWER(sof.ip_source_port) = LOWER(ser.name)
+    )
+    WHERE row_num = 1
+    AND port IS NOT NULL
+)
+ON CONFLICT DO UPDATE SET
+    inserted_at = EXCLUDED.inserted_at;
+;"#;
+
+const GOLD_DIM_NETWORK_LOCAL_IP: &str = r#"
+WITH local_address AS
+(
+    SELECT DISTINCT
+    *
+    FROM
+    (
+        SELECT
+            interface,
+            address
+        FROM silver_network_interface_address
+        UNION ALL
+        SELECT *
+        FROM (
+            VALUES
+                (NULL, '255.255.255.255'::INET),
+                (NULL, 'ff00::/8'::INET)
+        ) AS cast_addr(interface, address)
+    )
+)
+INSERT INTO gold_dim_network_local_ip BY NAME
+(
+SELECT DISTINCT
+    HASH(ip.address::TEXT, adr.interface) AS _id,
+    ip.address,
+    adr.interface,
+    ip.created_at AS started_at,
+    CURRENT_TIMESTAMP AS inserted_at
+FROM
+(
+    SELECT
+        address,
+        interface,
+        created_at,
         FROM
         (
             SELECT
                 *,
-                ROW_NUMBER() OVER (PARTITION BY pid, fd, ip_source_address, ip_source_port, ip_destination_address, ip_destination_port ORDER BY created_at DESC) AS row_num
-            FROM silver_open_files
-            WHERE UPPER(type) IN ('IPV4', 'IPV6')
-        ) ofn
-        LEFT JOIN gold_file_host hos1 ON LOWER(ofn.ip_source_address) = LOWER(hos1.name)
-        LEFT JOIN gold_file_host hos2 ON LOWER(ofn.ip_destination_address) = LOWER(hos2.name)
-        LEFT JOIN gold_file_service ser1 ON LOWER(ofn.ip_source_port) = LOWER(ser1.name)
-        LEFT JOIN gold_file_service ser2 ON LOWER(ofn.ip_destination_port) = LOWER(ser2.name)
-        WHERE ofn.row_num = 1
-    )
-);"#;
+                ROW_NUMBER() OVER (PARTITION BY address, interface ORDER BY created_at ASC) AS row_num
+            FROM
+            (
+                SELECT
+                    source AS address,
+                    interface,
+                    created_at
+                FROM silver_network_ip
+                UNION ALL
+                SELECT
+                    destination AS address,
+                    interface,
+                    created_at
+                FROM silver_network_ip
+            )
+        )
+    WHERE row_num = 1
+) ip
+INNER JOIN local_address adr
+ON ip.address <<= NETWORK(adr.address)
+)
+ON CONFLICT DO UPDATE SET
+    inserted_at = EXCLUDED.inserted_at
+;"#;
 
-const GOLD_NETWORK_PACKET: &str = r#"
-INSERT OR REPLACE INTO gold_network_packet BY NAME
+// TODO parse/add dns
+const GOLD_DIM_NETWORK_FOREIGN_IP: &str = r#"
+BEGIN;
+WITH local_address AS
+(
+    SELECT DISTINCT
+    *
+    FROM
+    (
+        SELECT
+            interface,
+            address
+        FROM silver_network_interface_address
+        UNION ALL
+        SELECT *
+        FROM (
+            VALUES
+                (NULL, '255.255.255.255'::INET),
+                (NULL, 'ff00::/8'::INET)
+        ) AS cast_addr(interface, address)
+    )
+)
+INSERT INTO gold_dim_network_foreign_ip BY NAME
+(
+SELECT DISTINCT
+    HASH(ip.address::TEXT) AS _id,
+    ip.address,
+    NULL AS domain_name,
+    ip.created_at AS started_at,
+    CURRENT_TIMESTAMP AS inserted_at
+FROM
+(
+    SELECT
+        address,
+        created_at,
+        FROM
+        (
+            SELECT
+                *,
+                ROW_NUMBER() OVER (PARTITION BY address ORDER BY created_at ASC) AS row_num
+            FROM
+            (
+                SELECT
+                    source AS address,
+                    created_at
+                FROM silver_network_ip
+                UNION ALL
+                SELECT
+                    destination AS address,
+                    created_at
+                FROM silver_network_ip
+            )
+        )
+    WHERE row_num = 1
+) ip
+LEFT JOIN local_address adr ON ip.address <<= NETWORK(adr.address)
+WHERE adr.address IS NULL
+)
+ON CONFLICT DO UPDATE SET
+    inserted_at = EXCLUDED.inserted_at;
+DELETE FROM gold_dim_network_foreign_ip
+WHERE address IN (SELECT address FROM gold_dim_network_local_ip);
+COMMIT;"#;
+
+const GOLD_FACT_PROCESS: &str = r#"
+INSERT OR IGNORE INTO gold_fact_process BY NAME
+(
+SELECT DISTINCT
+    pid,
+    lstart AS started_at,
+    created_at,
+    pcpu,
+    pmem,
+    CURRENT_TIMESTAMP AS inserted_at
+FROM silver_process_list
+)
+;"#;
+
+const GOLD_FACT_FILE_REG: &str = r#"
+INSERT OR IGNORE INTO gold_fact_file_reg BY NAME
+(
+SELECT DISTINCT
+    pid,
+    fd,
+    node,
+    created_at,
+    size,
+    CURRENT_TIMESTAMP AS inserted_at
+FROM silver_open_files
+WHERE UPPER(type) NOT IN ('IPV4', 'IPV6')
+)
+;"#;
+
+const GOLD_FACT_NETWORK_PACKET: &str = r#"
+INSERT OR REPLACE INTO gold_fact_network_packet BY NAME
 (
     SELECT
         _id,
@@ -137,8 +319,8 @@ INSERT OR REPLACE INTO gold_network_packet BY NAME
 );
 "#;
 
-const GOLD_NETWORK_IP: &str = r#"
-INSERT OR REPLACE INTO gold_network_ip BY NAME
+const GOLD_FACT_NETWORK_IP: &str = r#"
+INSERT OR REPLACE INTO gold_fact_network_ip BY NAME
 (
     SELECT
         packet._id AS _id,
@@ -156,74 +338,57 @@ INSERT OR REPLACE INTO gold_network_ip BY NAME
 );
 "#;
 
-const GOLD_PROCESS_NETWORK: &str = r#"
-INSERT OR REPLACE INTO gold_process_network BY NAME
+const GOLD_FACT_PROCESS_NETWORK: &str = r#"
+INSERT OR REPLACE INTO gold_fact_process_network BY NAME
 (
-    SELECT DISTINCT
-        HASH(pro.pid, net._id) AS _id,
-        pro.pid,
-        pro.uid,
-        ofn.command,
-        net.source_address,
-        net.source_port,
-        net.destination_address,
-        net.destination_port,
-        net.is_source,
-        net._id AS packet_id,
-        CURRENT_TIMESTAMP AS inserted_at,
-    FROM gold_process_list pro
-    INNER JOIN gold_open_files_network ofn
-    ON pro.pid = ofn.pid
-    AND ofn.started_at > pro.started_at
-    AND ofn.started_at < pro.inserted_at
-    LEFT JOIN (
+    WITH ip_packet AS
+    (
         SELECT
             _id,
-            ip_version,
-            transport_protocol,
-            source_address,
-            source_port,
-            destination_address,
-            destination_port,
             created_at,
-            inserted_at,
-            source_address AS address_key,
-            source_port AS port_key,
-            TRUE AS is_source,
-        FROM gold_network_ip
+            source_address AS address,
+            source_port AS port,
+            TRUE AS local_source,
+        FROM gold_fact_network_ip
         UNION
         SELECT
             _id,
-            ip_version,
-            transport_protocol,
-            source_address,
-            source_port,
-            destination_address,
-            destination_port,
             created_at,
-            inserted_at,
-            destination_address AS address_key,
-            destination_port AS port_key,
-            FALSE AS is_source,
-        FROM gold_network_ip
-    ) net
-    ON host(net.address_key) = host(ofn.source_address)
-    AND net.port_key = ofn.source_port
-    AND net.created_at > ofn.started_at
-    AND net.created_at < ofn.inserted_at
-);
-"#;
-
-const GOLD_PROCESS_COMMAND: &str = r#"
-INSERT OR REPLACE INTO gold_process_command BY NAME
-(
-    SELECT DISTINCT
-        pro.pid,
-        pro.ppid,
-        ofn.command,
-        CURRENT_TIMESTAMP AS inserted_at
-    FROM silver_process_list pro
-    LEFT JOIN silver_open_files ofn ON pro.pid = ofn.pid
+            destination_address AS address,
+            destination_port AS port,
+            FALSE AS local_source,
+        FROM gold_fact_network_ip
+    ),
+    socket AS
+    (
+        SELECT DISTINCT pid, source_address AS address, source_port AS port, started_at, inserted_at
+        FROM gold_dim_network_socket
+        WHERE source_port IS NOT NULL
+    )
+    SELECT
+        HASH(socket.pid, ip_packet._id, ip_packet.local_source) AS _id,
+        socket.pid,
+        ip_packet._id AS packet_id,
+        ip_packet.local_source,
+        CURRENT_TIMESTAMP AS inserted_at,
+    FROM ip_packet
+    INNER JOIN (SELECT * FROM socket WHERE address IS NOT NULL) socket
+    ON HOST(ip_packet.address) = HOST(socket.address)
+    AND ip_packet.port = socket.port
+    AND ip_packet.created_at >= socket.started_at
+    AND ip_packet.created_at <= socket.inserted_at
+    UNION ALL
+    SELECT
+        HASH(socket.pid, ip_packet._id, ip_packet.local_source) AS _id,
+        socket.pid,
+        ip_packet._id AS packet_id,
+        ip_packet.local_source,
+        CURRENT_TIMESTAMP AS inserted_at,
+    FROM ip_packet
+    INNER JOIN (SELECT * FROM socket WHERE address IS NULL) socket
+    ON ip_packet.port = socket.port
+    AND ip_packet.created_at >= socket.started_at
+    AND ip_packet.created_at <= socket.inserted_at
 );
 "#;
 
@@ -255,15 +420,21 @@ INSERT INTO gold_tech_table_count BY NAME
     SELECT 22 AS _id, 'silver_network_arp' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_arp UNION
     SELECT 23 AS _id, 'silver_network_transport' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_transport UNION
     SELECT 24 AS _id, 'silver_network_dns' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_dns UNION
-    SELECT 25 AS _id, 'gold_process_list' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_process_list UNION
-    SELECT 26 AS _id, 'gold_open_files_regular' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_open_files_regular UNION
-    SELECT 27 AS _id, 'gold_open_files_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_open_files_network UNION
-    SELECT 28 AS _id, 'gold_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_network_packet UNION
-    SELECT 29 AS _id, 'gold_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_network_ip UNION
-    SELECT 30 AS _id, 'gold_process_command' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_process_command UNION
-    SELECT 31 AS _id, 'gold_process_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_process_network UNION
-    SELECT 32 AS _id, 'gold_file_host' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_host UNION
-    SELECT 33 AS _id, 'gold_file_service' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_service
+    SELECT 25 AS _id, 'gold_dim_process' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_process UNION
+    SELECT 26 AS _id, 'gold_dim_file_reg' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_file_reg UNION
+    SELECT 27 AS _id, 'gold_dim_network_socket' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_socket UNION
+    SELECT 28 AS _id, 'gold_dim_network_open_port' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_open_port UNION
+    SELECT 29 AS _id, 'gold_dim_network_local_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_local_ip UNION
+    SELECT 30 AS _id, 'gold_dim_network_foreign_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_foreign_ip UNION
+    SELECT 31 AS _id, 'gold_fact_process' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process UNION
+    SELECT 32 AS _id, 'gold_fact_file_reg' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_file_reg UNION
+    SELECT 33 AS _id, 'gold_fact_network_packet' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_packet UNION
+    SELECT 34 AS _id, 'gold_fact_network_ip' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_ip UNION
+    SELECT 35 AS _id, 'gold_fact_process_network' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process_network UNION
+    SELECT 36 AS _id, 'gold_file_service' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_service UNION
+    SELECT 37 AS _id, 'gold_file_host' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_host UNION
+    SELECT 38 AS _id, 'gold_file_user' AS name, count(*) AS min_count, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_user
+
 )
 ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at,
@@ -320,14 +491,18 @@ ON CONFLICT DO UPDATE SET
 
 pub fn request() -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {}",
-        GOLD_PROCESS_LIST,
-        GOLD_OPEN_FILES_REGULAR,
-        GOLD_OPEN_FILES_NETWORK,
-        GOLD_NETWORK_PACKET,
-        GOLD_NETWORK_IP,
-        GOLD_PROCESS_NETWORK,
-        GOLD_PROCESS_COMMAND,
+        "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+        GOLD_DIM_PROCESS,
+        GOLD_DIM_FILE_REG,
+        GOLD_DIM_NETWORK_SOCKET,
+        GOLD_DIM_NETWORK_OPEN_PORT,
+        GOLD_DIM_NETWORK_LOCAL_IP,
+        GOLD_DIM_NETWORK_FOREIGN_IP,
+        GOLD_FACT_PROCESS,
+        GOLD_FACT_FILE_REG,
+        GOLD_FACT_NETWORK_PACKET,
+        GOLD_FACT_NETWORK_IP,
+        GOLD_FACT_PROCESS_NETWORK,
         GOLD_TECH_TABLE_COUNT,
         GOLD_TECH_CHRONO
     )

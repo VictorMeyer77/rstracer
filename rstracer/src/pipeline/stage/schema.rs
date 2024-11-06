@@ -4,7 +4,7 @@ use regex::Regex;
 
 const BRONZE_PROCESS_LIST: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_process_list_serial;
-CREATE TABLE IF NOT EXISTS bronze_process_list (
+CREATE OR REPLACE TABLE bronze_process_list (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_process_list_serial'),
     pid INTEGER,
     ppid INTEGER,
@@ -22,7 +22,7 @@ CREATE TABLE IF NOT EXISTS bronze_process_list (
 
 const BRONZE_OPEN_FILES: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_open_files_serial;
-CREATE TABLE IF NOT EXISTS bronze_open_files (
+CREATE OR REPLACE TABLE bronze_open_files (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_open_files_serial'),
     command TEXT,
     pid INTEGER,
@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS bronze_open_files (
 "#;
 
 const BRONZE_NETWORK_PACKET: &str = r#"
-CREATE TABLE IF NOT EXISTS bronze_network_packet (
+CREATE OR REPLACE TABLE bronze_network_packet (
     _id UHUGEINT PRIMARY KEY,
     interface TEXT,
     length UINTEGER,
@@ -52,7 +52,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_packet (
 
 const BRONZE_NETWORK_INTERFACE_ADDRESS: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_interface_address_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_interface_address (
+CREATE OR REPLACE TABLE bronze_network_interface_address (
     _id INTEGER DEFAULT nextval('bronze_network_interface_address_serial'),
     interface TEXT,
     address TEXT,
@@ -66,7 +66,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_interface_address (
 
 const BRONZE_NETWORK_ETHERNET: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_ethernet_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_ethernet (
+CREATE OR REPLACE TABLE bronze_network_ethernet (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_ethernet_serial'),
     packet_id UHUGEINT,
     source TEXT,
@@ -79,7 +79,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_ethernet (
 
 const BRONZE_NETWORK_IPV4: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_ipv4_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_ipv4 (
+CREATE OR REPLACE TABLE bronze_network_ipv4 (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_ipv4_serial'),
     packet_id UHUGEINT,
     version USMALLINT,
@@ -101,7 +101,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_ipv4 (
 
 const BRONZE_NETWORK_IPV6: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_ipv6_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_ipv6 (
+CREATE OR REPLACE TABLE bronze_network_ipv6 (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_ipv6_serial'),
     packet_id UHUGEINT,
     version USMALLINT,
@@ -118,7 +118,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_ipv6 (
 
 const BRONZE_NETWORK_ARP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_arp_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_arp (
+CREATE OR REPLACE TABLE bronze_network_arp (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_arp_serial'),
     packet_id UHUGEINT,
     hardware_type USMALLINT,
@@ -136,7 +136,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_arp (
 
 const BRONZE_NETWORK_TCP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_tcp_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_tcp (
+CREATE OR REPLACE TABLE bronze_network_tcp (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_tcp_serial'),
     packet_id UHUGEINT,
     source USMALLINT,
@@ -156,7 +156,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_tcp (
 
 const BRONZE_NETWORK_UDP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_udp_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_udp (
+CREATE OR REPLACE TABLE bronze_network_udp (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_udp_serial'),
     packet_id UHUGEINT,
     source USMALLINT,
@@ -169,7 +169,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_udp (
 
 const BRONZE_NETWORK_ICMP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_icmp_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_icmp (
+CREATE OR REPLACE TABLE bronze_network_icmp (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_icmp_serial'),
     packet_id UHUGEINT,
     version USMALLINT,
@@ -183,7 +183,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_icmp (
 
 const BRONZE_NETWORK_TLS: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_tls_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_tls (
+CREATE OR REPLACE TABLE bronze_network_tls (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_tls_serial'),
     packet_id UHUGEINT,
     content_type USMALLINT,
@@ -195,7 +195,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_tls (
 
 const BRONZE_NETWORK_DNS_HEADER: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_dns_header_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_dns_header (
+CREATE OR REPLACE TABLE bronze_network_dns_header (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_dns_header_serial'),
     packet_id UHUGEINT,
     id USMALLINT,
@@ -219,7 +219,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_dns_header (
 
 const BRONZE_NETWORK_DNS_QUERY: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_dns_query_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_dns_query (
+CREATE OR REPLACE TABLE bronze_network_dns_query (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_dns_query_serial'),
     packet_id UHUGEINT,
     qname UTINYINT[],
@@ -231,7 +231,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_dns_query (
 
 const BRONZE_NETWORK_DNS_RECORD: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_dns_response_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_dns_response (
+CREATE OR REPLACE TABLE bronze_network_dns_response (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_dns_response_serial'),
     packet_id UHUGEINT,
     origin USMALLINT,
@@ -246,7 +246,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_dns_response (
 
 const BRONZE_NETWORK_HTTP: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_network_http_serial;
-CREATE TABLE IF NOT EXISTS bronze_network_http (
+CREATE OR REPLACE TABLE bronze_network_http (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_network_http_serial'),
     packet_id UHUGEINT,
     type TEXT,
@@ -264,7 +264,7 @@ CREATE TABLE IF NOT EXISTS bronze_network_http (
 // SILVER
 
 const SILVER_PROCESS_LIST: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_process_list (
+CREATE OR REPLACE TABLE silver_process_list (
     _id INTEGER PRIMARY KEY,
     pid INTEGER,
     ppid INTEGER,
@@ -283,7 +283,7 @@ CREATE TABLE IF NOT EXISTS silver_process_list (
 "#;
 
 const SILVER_OPEN_FILES: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_open_files (
+CREATE OR REPLACE TABLE silver_open_files (
     _id INTEGER PRIMARY KEY,
     command TEXT,
     pid INTEGER,
@@ -306,7 +306,7 @@ CREATE TABLE IF NOT EXISTS silver_open_files (
 "#;
 
 const SILVER_NETWORK_PACKET: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_packet (
+CREATE OR REPLACE TABLE silver_network_packet (
     _id UHUGEINT PRIMARY KEY,
     interface TEXT,
     length UINTEGER,
@@ -322,7 +322,7 @@ CREATE TABLE IF NOT EXISTS silver_network_packet (
 "#;
 
 const SILVER_NETWORK_INTERFACE_ADDRESS: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_interface_address (
+CREATE OR REPLACE TABLE silver_network_interface_address (
     _id INTEGER PRIMARY KEY,
     interface TEXT,
     address INET,
@@ -334,7 +334,7 @@ CREATE TABLE IF NOT EXISTS silver_network_interface_address (
 "#;
 
 const SILVER_NETWORK_ETHERNET: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_ethernet (
+CREATE OR REPLACE TABLE silver_network_ethernet (
     _id UHUGEINT PRIMARY KEY,
     source TEXT,
     destination TEXT,
@@ -350,7 +350,7 @@ CREATE TABLE IF NOT EXISTS silver_network_ethernet (
 "#;
 
 const SILVER_NETWORK_DNS: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_dns (
+CREATE OR REPLACE TABLE silver_network_dns (
     _id TEXT PRIMARY KEY,
     packet_id UHUGEINT,
     id USMALLINT,
@@ -388,7 +388,7 @@ CREATE TABLE IF NOT EXISTS silver_network_dns (
 "#;
 
 const SILVER_NETWORK_IP: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_ip (
+CREATE OR REPLACE TABLE silver_network_ip (
     _id UHUGEINT PRIMARY KEY,
     version USMALLINT,
     length USMALLINT,
@@ -406,7 +406,7 @@ CREATE TABLE IF NOT EXISTS silver_network_ip (
 "#;
 
 const SILVER_NETWORK_TRANSPORT: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_transport (
+CREATE OR REPLACE TABLE silver_network_transport (
     _id UHUGEINT PRIMARY KEY,
     protocol TEXT,
     source USMALLINT,
@@ -421,7 +421,7 @@ CREATE TABLE IF NOT EXISTS silver_network_transport (
 "#;
 
 const SILVER_NETWORK_ARP: &str = r#"
-CREATE TABLE IF NOT EXISTS silver_network_arp (
+CREATE OR REPLACE TABLE silver_network_arp (
     _id UHUGEINT PRIMARY KEY,
     hardware_type USMALLINT,
     protocol_type USMALLINT,
@@ -444,7 +444,7 @@ CREATE TABLE IF NOT EXISTS silver_network_arp (
 // GOLD FILE
 
 const GOLD_FILE_SERVICE: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_file_service (
+CREATE OR REPLACE TABLE gold_file_service (
     name TEXT,
     port USMALLINT,
     protocol TEXT,
@@ -454,7 +454,7 @@ CREATE TABLE IF NOT EXISTS gold_file_service (
 "#;
 
 const GOLD_FILE_HOST: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_file_host (
+CREATE OR REPLACE TABLE gold_file_host (
     name TEXT,
     address TEXT,
     inserted_at TIMESTAMP,
@@ -462,48 +462,49 @@ CREATE TABLE IF NOT EXISTS gold_file_host (
 );
 "#;
 
-// GOLD
-
-const GOLD_PROCESS_LIST: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_process_list (
-    pid USMALLINT,
-    ppid USMALLINT,
-    uid USMALLINT,
-    command TEXT,
-    min_pcpu FLOAT,
-    max_pcpu FLOAT,
-    last_pcpu FLOAT,
-    min_pmem FLOAT,
-    max_pmem FLOAT,
-    last_pmem FLOAT,
-    started_at TIMESTAMP,
-    inserted_at TIMESTAMP,
-    PRIMARY KEY (pid, started_at)
-);
-"#;
-
-const GOLD_OPEN_FILES_REGULAR: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_open_files_regular (
-    pid USMALLINT,
-    uid USMALLINT,
-    fd TEXT,
-    node TEXT,
-    command TEXT,
+const GOLD_FILE_USER: &str = r#"
+CREATE OR REPLACE TABLE gold_file_user (
     name TEXT,
-    min_size BIGINT,
-    max_size BIGINT,
-    last_size BIGINT,
-    started_at TIMESTAMP,
+    uid SMALLINT,
     inserted_at TIMESTAMP,
-    PRIMARY KEY (pid, fd, node)
+    PRIMARY KEY (name, uid)
 );
 "#;
 
-const GOLD_OPEN_FILES_NETWORK: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_open_files_network (
+// GOLD DIM
+
+const GOLD_DIM_PROCESS: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_process (
+	pid USMALLINT,
+	ppid USMALLINT,
+	uid SMALLINT,
+	command TEXT,
+	full_command TEXT,
+	started_at TIMESTAMP,
+	inserted_at TIMESTAMP,
+	PRIMARY KEY (pid, started_at)
+);
+"#;
+
+const GOLD_DIM_FILE_REG: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_file_reg (
+	pid USMALLINT,
+	uid SMALLINT,
+	fd TEXT,
+	node TEXT,
+	command TEXT,
+	name TEXT,
+	started_at TIMESTAMP,
+	inserted_at TIMESTAMP,
+	PRIMARY KEY (pid, fd, node)
+);
+"#;
+
+const GOLD_DIM_NETWORK_SOCKET: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_socket (
     _id UBIGINT PRIMARY KEY,
     pid USMALLINT,
-    uid USMALLINT,
+    uid SMALLINT,
     command TEXT,
     source_address INET,
     source_port USMALLINT,
@@ -514,8 +515,66 @@ CREATE TABLE IF NOT EXISTS gold_open_files_network (
 );
 "#;
 
-const GOLD_NETWORK_PACKET: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_network_packet (
+const GOLD_DIM_NETWORK_OPEN_PORT: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_open_port (
+    pid USMALLINT,
+    uid SMALLINT,
+    command TEXT,
+    port USMALLINT,
+    started_at TIMESTAMP,
+    inserted_at TIMESTAMP,
+    PRIMARY KEY (pid, port)
+);
+"#;
+
+const GOLD_DIM_NETWORK_LOCAL_IP: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_local_ip (
+    _id UBIGINT PRIMARY KEY,
+    address INET,
+    interface TEXT,
+    started_at TIMESTAMP,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+const GOLD_DIM_NETWORK_FOREIGN_IP: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_foreign_ip (
+    _id UBIGINT PRIMARY KEY,
+    address INET,
+    domain_name TEXT,
+    started_at TIMESTAMP,
+    inserted_at TIMESTAMP,
+);
+"#;
+
+// GOLD FACT
+
+const GOLD_FACT_PROCESS: &str = r#"
+CREATE OR REPLACE TABLE gold_fact_process (
+    pid USMALLINT,
+    started_at TIMESTAMP,
+    created_at TIMESTAMP,
+    pcpu FLOAT,
+    pmem FLOAT,
+    inserted_at TIMESTAMP,
+    PRIMARY KEY (pid, started_at, created_at)
+);
+"#;
+
+const GOLD_FACT_FILE_REG: &str = r#"
+CREATE OR REPLACE TABLE gold_fact_file_reg (
+    pid USMALLINT,
+	fd TEXT,
+	node TEXT,
+	created_at TIMESTAMP,
+    size BIGINT,
+	inserted_at TIMESTAMP,
+	PRIMARY KEY (pid, fd, node, created_at)
+);
+"#;
+
+const GOLD_FACT_NETWORK_PACKET: &str = r#"
+CREATE OR REPLACE TABLE gold_fact_network_packet (
     _id UHUGEINT PRIMARY KEY,
     interface TEXT,
     length UINTEGER,
@@ -528,49 +587,34 @@ CREATE TABLE IF NOT EXISTS gold_network_packet (
 );
 "#;
 
-const GOLD_NETWORK_IP: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_network_ip (
+const GOLD_FACT_NETWORK_IP: &str = r#"
+CREATE OR REPLACE TABLE gold_fact_network_ip (
     _id UHUGEINT PRIMARY KEY,
     ip_version UTINYINT,
     transport_protocol TEXT,
     source_address INET,
-    source_port TEXT,
+    source_port USMALLINT,
     destination_address INET,
-    destination_port TEXT,
+    destination_port USMALLINT,
     created_at TIMESTAMP,
     inserted_at TIMESTAMP
 );
 "#;
 
-const GOLD_PROCESS_NETWORK: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_process_network (
+const GOLD_FACT_PROCESS_NETWORK: &str = r#"
+CREATE OR REPLACE TABLE gold_fact_process_network (
     _id UBIGINT PRIMARY KEY,
-	pid USMALLINT,
-	uid USMALLINT,
-	command TEXT,
-	source_address INET,
-	source_port USMALLINT,
-	destination_address INET,
-	destination_port USMALLINT,
-	is_source BOOL,
-	process_svr_id INTEGER,
-	open_file_svr_id INTEGER,
-	packet_id UHUGEINT,
+    pid USMALLINT,
+    packet_id UHUGEINT,
+    local_source BOOLEAN,
     inserted_at TIMESTAMP
 );
 "#;
 
-const GOLD_PROCESS_COMMAND: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_process_command (
-	pid USMALLINT PRIMARY KEY,
-	ppid USMALLINT,
-	command TEXT,
-	inserted_at TIMESTAMP
-);
-"#;
+// GOLD TECHNICAL
 
 const GOLD_TECH_TABLE_COUNT: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_tech_table_count (
+CREATE OR REPLACE TABLE gold_tech_table_count (
 	_id USMALLINT PRIMARY KEY,
 	name TEXT,
 	min_count BIGINT,
@@ -581,7 +625,7 @@ CREATE TABLE IF NOT EXISTS gold_tech_table_count (
 "#;
 
 const GOLD_TECH_CHRONO: &str = r#"
-CREATE TABLE IF NOT EXISTS gold_tech_chrono (
+CREATE OR REPLACE TABLE gold_tech_chrono (
 	name TEXT PRIMARY KEY,
 	brz_max_ingest FLOAT,
 	brz_min_ingest FLOAT,
@@ -596,7 +640,7 @@ CREATE TABLE IF NOT EXISTS gold_tech_chrono (
 pub fn create_schema_request() -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {} {} {} {} {}"#,
+           {} {} {} {} {} {} {} {} {} {} {} {}"#,
         BRONZE_PROCESS_LIST,
         BRONZE_OPEN_FILES,
         BRONZE_NETWORK_PACKET,
@@ -624,13 +668,18 @@ pub fn create_schema_request() -> String {
         SILVER_NETWORK_ARP,
         GOLD_FILE_SERVICE,
         GOLD_FILE_HOST,
-        GOLD_PROCESS_LIST,
-        GOLD_OPEN_FILES_REGULAR,
-        GOLD_OPEN_FILES_NETWORK,
-        GOLD_NETWORK_PACKET,
-        GOLD_NETWORK_IP,
-        GOLD_PROCESS_NETWORK,
-        GOLD_PROCESS_COMMAND,
+        GOLD_FILE_USER,
+        GOLD_DIM_PROCESS,
+        GOLD_DIM_FILE_REG,
+        GOLD_DIM_NETWORK_SOCKET,
+        GOLD_DIM_NETWORK_OPEN_PORT,
+        GOLD_DIM_NETWORK_LOCAL_IP,
+        GOLD_DIM_NETWORK_FOREIGN_IP,
+        GOLD_FACT_PROCESS,
+        GOLD_FACT_FILE_REG,
+        GOLD_FACT_NETWORK_PACKET,
+        GOLD_FACT_NETWORK_IP,
+        GOLD_FACT_PROCESS_NETWORK,
         GOLD_TECH_TABLE_COUNT,
         GOLD_TECH_CHRONO
     )
@@ -638,7 +687,7 @@ pub fn create_schema_request() -> String {
 
 pub fn get_schema() -> Vec<String> {
     let request = create_schema_request();
-    let regex = Regex::new(r"CREATE TABLE IF NOT EXISTS\s+(\w+)\s*\(").unwrap();
+    let regex = Regex::new(r"CREATE OR REPLACE TABLE\s+(\w+)\s*\(").unwrap();
     let tables: Vec<String> = regex
         .captures_iter(&request)
         .map(|capture| capture.get(1).unwrap().as_str().to_string())
@@ -663,7 +712,7 @@ pub mod tests {
 
         if let Some(row) = rows.next().unwrap() {
             let count: usize = row.get(0).unwrap();
-            assert_eq!(count, 36);
+            assert_eq!(count, 41);
         }
     }
 }
