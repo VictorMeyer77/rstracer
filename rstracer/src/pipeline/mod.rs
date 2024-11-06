@@ -77,7 +77,7 @@ fn get_schedule_request_task(config: &Config) -> Result<HashMap<(&str, String, u
     );
     tasks.insert(
         ("gold", gold::request(), config.schedule.gold),
-        Local::now().timestamp(),
+        Local::now().timestamp() + 1,
     );
     tasks.insert(
         (
