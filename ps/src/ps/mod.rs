@@ -9,7 +9,7 @@ pub mod unix;
 pub struct Process {
     pub pid: u32,        // Process ID
     pub ppid: u32,       // Parent Process ID
-    pub uid: u32,        // User ID of the process owner
+    pub uid: i16,        // User ID of the process owner
     pub lstart: i64,     // Exact date and time when the process started
     pub pcpu: f32,       // CPU usage percentage
     pub pmem: f32,       // Memory usage percentage

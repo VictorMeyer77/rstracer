@@ -50,15 +50,15 @@ fn split_process_per_rows(of_per_process: &str) -> Vec<String> {
     of_per_process.split("\nf").map(String::from).collect()
 }
 
-fn deserialize_header(header: &str) -> Result<(u32, u32, String), Error> {
+fn deserialize_header(header: &str) -> Result<(u32, i16, String), Error> {
     let headers: Vec<&str> = header.lines().collect();
     let pid: u32 = headers[0].replace('p', "").parse()?;
-    let uid: u32 = headers[2][1..].parse()?;
+    let uid: i16 = headers[2][1..].parse()?;
     let command: String = headers[1][1..].to_string();
     Ok((pid, uid, command))
 }
 
-fn row_to_struct(header: &(u32, u32, String), row: &str) -> OpenFile {
+fn row_to_struct(header: &(u32, i16, String), row: &str) -> OpenFile {
     let fields: Vec<&str> = row.lines().collect();
     let mut buffer_open_file: OpenFile = OpenFile::new(header.0, header.1, &header.2);
     buffer_open_file.fd = fields[0].to_string();

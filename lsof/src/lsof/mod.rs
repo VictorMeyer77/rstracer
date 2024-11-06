@@ -10,7 +10,7 @@ pub mod unix;
 pub struct OpenFile {
     pub command: String, // Command
     pub pid: u32,        // Process ID
-    pub uid: u32,        // User ID
+    pub uid: i16,        // User ID
     pub fd: String,      // File Descriptor
     pub _type: String,   // Column type
     pub device: String,  // Device
@@ -21,7 +21,7 @@ pub struct OpenFile {
 }
 
 impl OpenFile {
-    pub fn new(pid: u32, uid: u32, command: &str) -> Self {
+    pub fn new(pid: u32, uid: i16, command: &str) -> Self {
         OpenFile {
             command: command.to_string(),
             pid,
