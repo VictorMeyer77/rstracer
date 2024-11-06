@@ -2,6 +2,7 @@ use crate::config::read_config;
 use crate::pipeline::database::{close_connection, execute_request};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::create_schema_request;
+use crate::pipeline::stage::{gold, silver};
 use crate::pipeline::{
     execute_request_task, execute_schedule_request_task, network_capture_sink_task, open_file_task,
     process_task,
@@ -50,6 +51,8 @@ pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         network_capture_sink_task,
     );
 
+    execute_request(&silver::request(), config.in_memory)?;
+    execute_request(&gold::request(), config.in_memory)?;
     close_connection(config.in_memory)?;
 
     execute_schedule_request_result?;
