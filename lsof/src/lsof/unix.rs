@@ -1,17 +1,27 @@
 use crate::lsof::error::Error;
-use crate::lsof::{Lsof, OpenFile};
+use crate::lsof::{FileType, Lsof, OpenFile};
 use std::process::{Command, Output};
 
 pub struct Unix;
 
 impl Lsof for Unix {
-    fn exec() -> Result<Vec<OpenFile>, Error> {
-        let mut open_files =
-            Self::parse_output(&String::from_utf8_lossy(&Self::lsof_network()?.stdout))?;
-        open_files.extend(Self::parse_output(&String::from_utf8_lossy(
-            &Self::lsof_mount_file()?.stdout,
-        ))?);
-        Ok(open_files)
+    fn exec(file_type: &FileType) -> Result<Vec<OpenFile>, Error> {
+        match file_type {
+            FileType::REGULAR => Ok(Self::parse_output(&String::from_utf8_lossy(
+                &Self::lsof_mount_file()?.stdout,
+            ))?),
+            FileType::NETWORK => Ok(Self::parse_output(&String::from_utf8_lossy(
+                &Self::lsof_network()?.stdout,
+            ))?),
+            FileType::ALL => {
+                let mut open_files =
+                    Self::parse_output(&String::from_utf8_lossy(&Self::lsof_network()?.stdout))?;
+                open_files.extend(Self::parse_output(&String::from_utf8_lossy(
+                    &Self::lsof_mount_file()?.stdout,
+                ))?);
+                Ok(open_files)
+            }
+        }
     }
 }
 

@@ -638,7 +638,7 @@ fn bronze_tls(tls: Tls, packet_id: u128) -> String {
 mod tests {
     use super::*;
     use crate::pipeline::stage::tests::create_test_connection;
-    use lsof::lsof::lsof;
+    use lsof::lsof::{lsof, FileType};
     use ps::ps::ps;
 
     #[derive(Debug)]
@@ -849,7 +849,7 @@ mod tests {
     #[test]
     fn test_insert_open_files() {
         let connection = create_test_connection();
-        let processes = lsof().unwrap();
+        let processes = lsof(&FileType::ALL).unwrap();
         connection
             .execute_batch(&create_insert_batch_request(processes))
             .unwrap();

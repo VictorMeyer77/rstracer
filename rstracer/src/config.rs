@@ -10,10 +10,16 @@ pub struct Config {
     pub in_memory: bool,
     pub request: ChannelConfig,
     pub ps: ChannelConfig,
-    pub lsof: ChannelConfig,
+    pub lsof: LsofConfig,
     pub network: ChannelConfig,
     pub vacuum: VacuumConfig,
     pub schedule: ScheduleConfig,
+}
+
+#[derive(Debug, Deserialize, Clone)]
+pub struct LsofConfig {
+    pub regular: ChannelConfig,
+    pub network: ChannelConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -77,9 +83,12 @@ pub fn read_config() -> Result<Config, Error> {
         // ps
         .set_default("ps.producer_frequency", 3)?
         .set_default("ps.consumer_batch_size", 200)?
-        // lsof
-        .set_default("lsof.producer_frequency", 15)?
-        .set_default("lsof.consumer_batch_size", 200)?
+        // lsof regular
+        .set_default("lsof.regular.producer_frequency", 20)?
+        .set_default("lsof.regular.consumer_batch_size", 200)?
+        // lsof network
+        .set_default("lsof.network.producer_frequency", 3)?
+        .set_default("lsof.network.consumer_batch_size", 200)?
         // network
         .set_default("network.channel_size", 500)?
         .set_default("network.producer_frequency", 1)?
