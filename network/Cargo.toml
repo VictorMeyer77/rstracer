@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.38"
-futures = "0.3.31"
 nom = "8.0.0-alpha2"
 pcap = "2.0.0"
 pnet = "0.35.0"
