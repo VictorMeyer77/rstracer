@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 chrono = "0.4.38"
-thiserror = "1.0.63"
+thiserror = "2.0.0"
 
 [[example]]
 name = "list_open_file"
