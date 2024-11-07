@@ -13,6 +13,7 @@ pub struct Config {
     pub lsof: LsofConfig,
     pub network: ChannelConfig,
     pub vacuum: VacuumConfig,
+    pub export: ExportConfig,
     pub schedule: ScheduleConfig,
 }
 
@@ -47,11 +48,18 @@ impl VacuumConfig {
 }
 
 #[derive(Debug, Deserialize, Clone)]
+pub struct ExportConfig {
+    pub directory: String,
+    pub format: String,
+}
+
+#[derive(Debug, Deserialize, Clone)]
 pub struct ScheduleConfig {
     pub silver: u64,
     pub gold: u64,
     pub vacuum: u64,
     pub file: u64,
+    pub export: u64,
 }
 
 impl ScheduleConfig {
@@ -61,6 +69,7 @@ impl ScheduleConfig {
             ("gold".to_string(), self.gold),
             ("vacuum".to_string(), self.vacuum),
             ("file".to_string(), self.file),
+            ("export".to_string(), self.export),
         ]
     }
 }
@@ -77,6 +86,7 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("schedule.gold", 10)?
         .set_default("schedule.vacuum", 15)?
         .set_default("schedule.file", 300)?
+        .set_default("schedule.export", 60)?
         // request
         .set_default("request.channel_size", 100)?
         .set_default("request.consumer_batch_size", 20)?
@@ -92,7 +102,10 @@ pub fn read_config() -> Result<Config, Error> {
         // network
         .set_default("network.channel_size", 500)?
         .set_default("network.producer_frequency", 1)?
-        .set_default("network.consumer_batch_size", 200)?;
+        .set_default("network.consumer_batch_size", 200)?
+        // export
+        .set_default("export.directory", "target/data/")?
+        .set_default("export.format", "parquet")?;
 
     let config_file = Path::new(CONFIG_FILE_PATH);
     if config_file.exists() {

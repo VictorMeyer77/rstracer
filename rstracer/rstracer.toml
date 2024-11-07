@@ -3,8 +3,8 @@
 # If a rstracer.toml exists in the workspace, the programs will use it, else a default configuration will be applied.
 
 # If set to true, the database is stored in memory ("in-memory" mode), which offers higher performance,
-# but the data is not accessible outside the running process. Use this mode only if you are using
-# rstracer as a library. If set to false, the database is stored in a file named "rstracer.db".
+# but the data is not accessible outside the running process. You can only request your data with the export parquet or csv.
+# If set to false, the database is stored in a file named "rstracer.db".
 # This option is less performant but allows querying the file after the process ends.
 in_memory = false
 
@@ -27,12 +27,14 @@ gold = 600    # Retention period in seconds for gold layer
 # - **Gold**: ETL process from the silver layer.
 # - **Vacuum**: Executes the vacuum tasks as defined above.
 # - **File**: File tables contain auxiliary information such as data from `/etc/hosts` or `/etc/services`.
+# - **Export**: Export gold tables to parquet or csv output. To disable export, set 0.
 #   They are loaded at the beginning of the run and don’t need regular updates.
 [schedule]
-silver = 5        # Frequency in seconds to run the silver task
-gold = 5          # Frequency in seconds to run the gold task
+silver = 10        # Frequency in seconds to run the silver task
+gold = 10          # Frequency in seconds to run the gold task
 vacuum = 15       # Frequency in seconds to run the vacuum task
 file = 300        # Frequency in seconds to run the file task
+export = 60       # Frequency in seconds to run the file task
 
 # [Request Channel]
 # DuckDB does not allow concurrent writes. All requests are queued in a channel, which is processed sequentially
@@ -80,3 +82,11 @@ consumer_batch_size = 200    # Number of rows per batch in `INSERT INTO` stateme
 channel_size = 500           # Maximum number of packets in the queue
 producer_frequency = 1       # Time interval (in seconds) between consecutive reads from the queue
 consumer_batch_size = 200    # Packets read per batch
+
+# [Export Task]
+# Configuration for exporting "gold" tables to either parquet or CSV files.
+# - `directory`: The directory where the output files will be stored. If it does not exist, it will be created automatically.
+# - `format`: Specifies the export file format. Accepted values are "parquet" or "csv".
+[export]
+directory = "target/data/"   # Output directory
+format = "parquet"           # Output format, accepted "parquet" or "csv"

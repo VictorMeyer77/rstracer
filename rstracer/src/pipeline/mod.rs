@@ -2,7 +2,7 @@ use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
-use crate::pipeline::stage::{file, gold, silver, vacuum};
+use crate::pipeline::stage::{export, file, gold, silver, vacuum};
 use chrono::Local;
 use lsof::lsof::{lsof, FileType, OpenFile};
 use network::capture::Capture;
@@ -82,13 +82,35 @@ fn get_schedule_request_task(config: &Config) -> Result<HashMap<(&str, String, u
     tasks.insert(
         (
             "vacuum",
-            vacuum::request(config.vacuum.clone()),
+            vacuum::request(&config.vacuum),
             config.schedule.vacuum,
         ),
         Local::now().timestamp(),
     );
     tasks.insert(("file", file::request()?, config.schedule.file), 0);
+    if config.schedule.export > 0 {
+        tasks.insert(
+            (
+                "export",
+                export::request(&config.export),
+                config.schedule.export,
+            ),
+            0,
+        );
+    }
     Ok(tasks)
+}
+
+fn execute_final_schedule_request(config: &Config) -> Result<(), Error> {
+    execute_request(&silver::request(), config.in_memory)?;
+    info!("final silver request executed");
+    execute_request(&gold::request(), config.in_memory)?;
+    info!("final gold request executed");
+    if config.schedule.export > 0 {
+        execute_request(&export::request(&config.export), config.in_memory)?;
+        info!("final export request executed");
+    };
+    Ok(())
 }
 
 pub async fn execute_schedule_request_task(
@@ -112,9 +134,10 @@ pub async fn execute_schedule_request_task(
                 );
             }
         }
-
         sleep(Duration::from_millis(10)).await;
     }
+
+    execute_final_schedule_request(config)?;
 
     info!("consumer stop gracefully");
     Ok(())

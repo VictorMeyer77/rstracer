@@ -1,7 +1,7 @@
 use crate::config::VacuumConfig;
 use crate::pipeline::stage::schema::get_schema;
 
-pub fn request(config: VacuumConfig) -> String {
+pub fn request(config: &VacuumConfig) -> String {
     let mut query: String = String::new();
 
     for table in get_schema() {
@@ -32,7 +32,7 @@ mod tests {
             silver: 30,
             gold: 1000,
         };
-        let request = request(vacuum_config);
+        let request = request(&vacuum_config);
         println!("{:?}", request);
         assert!(!request.contains("gold_file_"));
         assert!(!request.contains("_tech_"));
@@ -55,7 +55,7 @@ mod tests {
             silver: 30,
             gold: 0,
         };
-        let request = request(vacuum_config);
+        let request = request(&vacuum_config);
         assert!(!request.contains("gold_"));
         assert_eq!(request.matches("DELETE FROM").count(), 25);
         assert!(request.contains(
