@@ -6,8 +6,8 @@ const BRONZE_PROCESS_LIST: &str = r#"
 CREATE SEQUENCE IF NOT EXISTS bronze_process_list_serial;
 CREATE OR REPLACE TABLE bronze_process_list (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_process_list_serial'),
-    pid USMALLINT,
-    ppid USMALLINT,
+    pid UINTEGER,
+    ppid UINTEGER,
     uid INTEGER,
     lstart TIMESTAMP,
     pcpu FLOAT,
@@ -25,7 +25,7 @@ CREATE SEQUENCE IF NOT EXISTS bronze_open_files_serial;
 CREATE OR REPLACE TABLE bronze_open_files (
     _id INTEGER PRIMARY KEY DEFAULT nextval('bronze_open_files_serial'),
     command TEXT,
-    pid USMALLINT,
+    pid UINTEGER,
     uid INTEGER,
     fd TEXT,
     type TEXT,
@@ -266,8 +266,8 @@ CREATE OR REPLACE TABLE bronze_network_http (
 const SILVER_PROCESS_LIST: &str = r#"
 CREATE OR REPLACE TABLE silver_process_list (
     _id INTEGER PRIMARY KEY,
-    pid USMALLINT,
-    ppid USMALLINT,
+    pid UINTEGER,
+    ppid UINTEGER,
     uid INTEGER,
     lstart TIMESTAMP,
     pcpu FLOAT,
@@ -286,7 +286,7 @@ const SILVER_OPEN_FILES: &str = r#"
 CREATE OR REPLACE TABLE silver_open_files (
     _id INTEGER PRIMARY KEY,
     command TEXT,
-    pid USMALLINT,
+    pid UINTEGER,
     uid INTEGER,
     fd TEXT,
     type TEXT,
@@ -475,8 +475,8 @@ CREATE OR REPLACE TABLE gold_file_user (
 
 const GOLD_DIM_PROCESS: &str = r#"
 CREATE OR REPLACE TABLE gold_dim_process (
-	pid USMALLINT,
-	ppid USMALLINT,
+	pid UINTEGER,
+	ppid UINTEGER,
 	uid INTEGER,
 	command TEXT,
 	full_command TEXT,
@@ -488,7 +488,7 @@ CREATE OR REPLACE TABLE gold_dim_process (
 
 const GOLD_DIM_FILE_REG: &str = r#"
 CREATE OR REPLACE TABLE gold_dim_file_reg (
-	pid USMALLINT,
+	pid UINTEGER,
 	uid INTEGER,
 	fd TEXT,
 	node TEXT,
@@ -503,7 +503,7 @@ CREATE OR REPLACE TABLE gold_dim_file_reg (
 const GOLD_DIM_NETWORK_SOCKET: &str = r#"
 CREATE OR REPLACE TABLE gold_dim_network_socket (
     _id UBIGINT PRIMARY KEY,
-    pid USMALLINT,
+    pid UINTEGER,
     uid INTEGER,
     command TEXT,
     source_address INET,
@@ -517,7 +517,7 @@ CREATE OR REPLACE TABLE gold_dim_network_socket (
 
 const GOLD_DIM_NETWORK_OPEN_PORT: &str = r#"
 CREATE OR REPLACE TABLE gold_dim_network_open_port (
-    pid USMALLINT,
+    pid UINTEGER,
     uid INTEGER,
     command TEXT,
     port USMALLINT,
@@ -551,7 +551,7 @@ CREATE OR REPLACE TABLE gold_dim_network_foreign_ip (
 
 const GOLD_FACT_PROCESS: &str = r#"
 CREATE OR REPLACE TABLE gold_fact_process (
-    pid USMALLINT,
+    pid UINTEGER,
     started_at TIMESTAMP,
     created_at TIMESTAMP,
     pcpu FLOAT,
@@ -563,7 +563,7 @@ CREATE OR REPLACE TABLE gold_fact_process (
 
 const GOLD_FACT_FILE_REG: &str = r#"
 CREATE OR REPLACE TABLE gold_fact_file_reg (
-    pid USMALLINT,
+    pid UINTEGER,
 	fd TEXT,
 	node TEXT,
 	created_at TIMESTAMP,
@@ -604,7 +604,7 @@ CREATE OR REPLACE TABLE gold_fact_network_ip (
 const GOLD_FACT_PROCESS_NETWORK: &str = r#"
 CREATE OR REPLACE TABLE gold_fact_process_network (
     _id UBIGINT PRIMARY KEY,
-    pid USMALLINT,
+    pid UINTEGER,
     packet_id UHUGEINT,
     local_source BOOLEAN,
     inserted_at TIMESTAMP
