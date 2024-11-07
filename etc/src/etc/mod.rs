@@ -1,7 +1,7 @@
 pub mod error;
 pub mod host;
-pub mod passwd;
 pub mod service;
+pub mod user;
 
 use error::Error;
 

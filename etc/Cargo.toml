@@ -15,3 +15,6 @@ name = "read_hosts"
 
 [[example]]
 name = "read_services"
+
+[[example]]
+name = "read_users"

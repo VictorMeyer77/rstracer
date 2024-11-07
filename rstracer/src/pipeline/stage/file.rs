@@ -1,7 +1,7 @@
 use crate::pipeline::error::Error;
 use etc::etc::host::Host;
-use etc::etc::passwd::User;
 use etc::etc::service::Service;
+use etc::etc::user::User;
 use etc::etc::EtcReader;
 
 fn insert_service_request() -> Result<String, Error> {

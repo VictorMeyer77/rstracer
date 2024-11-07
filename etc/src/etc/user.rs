@@ -8,7 +8,7 @@ const FILE_PATH: &str = "/etc/passwd";
 #[derive(Debug, Clone, PartialOrd, PartialEq, Ord, Eq)]
 pub struct User {
     pub name: String,
-    pub uid: i16,
+    pub uid: i32,
 }
 
 impl EtcReader<User> for User {
@@ -26,12 +26,12 @@ impl EtcReader<User> for User {
 fn parse_cut_output(output: &str) -> Result<Vec<User>, Error> {
     output
         .lines()
-        .filter(|row| !row.starts_with('#'))
+        .filter(|row| !row.starts_with('#') && !row.is_empty())
         .map(|row| {
             let fields: Vec<&str> = row.split(':').collect();
             Ok(User {
                 name: fields[0].to_string(),
-                uid: fields[1].parse::<i16>()?,
+                uid: fields[1].parse::<i32>()?,
             })
         })
         .collect()
@@ -57,7 +57,7 @@ fn parse_dscl_output(output: &str) -> Result<Vec<User>, Error> {
             let fields: Vec<&str> = row.split_whitespace().collect();
             Ok(User {
                 name: fields[..fields.len() - 1].join(" ").to_string(),
-                uid: fields.last().unwrap().parse::<i16>()?,
+                uid: fields.last().unwrap().parse::<i32>()?,
             })
         })
         .collect()
@@ -122,6 +122,53 @@ mod tests {
         let output = "";
         let result = parse_dscl_output(output).unwrap();
         let expected: Vec<User> = vec![];
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_cut_output_valid_data() {
+        let output = "john:1000\nmary:1001\n# comment line\npaul:1002";
+        let expected = vec![
+            User {
+                name: "john".to_string(),
+                uid: 1000,
+            },
+            User {
+                name: "mary".to_string(),
+                uid: 1001,
+            },
+            User {
+                name: "paul".to_string(),
+                uid: 1002,
+            },
+        ];
+        let result = parse_cut_output(output).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_cut_output_invalid_uid() {
+        let output = "john:not_a_number\nmary:1001";
+        let result = parse_cut_output(output);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_cut_output_empty_lines_and_comments() {
+        let output = "# this is a comment line\n\nmary:1001\n\n";
+        let expected = vec![User {
+            name: "mary".to_string(),
+            uid: 1001,
+        }];
+        let result = parse_cut_output(output).unwrap();
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_parse_cut_output_empty_input() {
+        let output = "";
+        let expected: Vec<User> = vec![];
+        let result = parse_cut_output(output).unwrap();
         assert_eq!(result, expected);
     }
 }
