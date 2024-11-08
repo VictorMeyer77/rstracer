@@ -30,7 +30,7 @@ CREATE OR REPLACE TABLE bronze_open_files (
     fd TEXT,
     type TEXT,
     device TEXT,
-    size BIGINT,
+    size UBIGINT,
     node TEXT,
     name TEXT,
     created_at TIMESTAMP,
@@ -291,7 +291,7 @@ CREATE OR REPLACE TABLE silver_open_files (
     fd TEXT,
     type TEXT,
     device TEXT,
-    size BIGINT,
+    size UBIGINT,
     node TEXT,
     name TEXT,
     created_at TIMESTAMP,
@@ -567,7 +567,7 @@ CREATE OR REPLACE TABLE gold_fact_file_reg (
 	fd TEXT,
 	node TEXT,
 	created_at TIMESTAMP,
-    size BIGINT,
+    size UBIGINT,
 	inserted_at TIMESTAMP,
 	PRIMARY KEY (pid, fd, node, created_at)
 );

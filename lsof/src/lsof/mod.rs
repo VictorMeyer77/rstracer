@@ -22,7 +22,7 @@ pub struct OpenFile {
     pub fd: String,      // File Descriptor
     pub _type: String,   // Column type
     pub device: String,  // Device
-    pub size: u32,       // Size
+    pub size: u64,       // Size
     pub node: String,    // Node
     pub name: String,    // Name
     pub created_at: i64, // Timestamp command execution
