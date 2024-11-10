@@ -19,3 +19,4 @@ Cargo.lock
 *.wal
 *.parquet
 *.csv
+export/

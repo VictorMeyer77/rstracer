@@ -88,5 +88,5 @@ consumer_batch_size = 200    # Packets read per batch
 # - `directory`: The directory where the output files will be stored. If it does not exist, it will be created automatically.
 # - `format`: Specifies the export file format. Accepted values are "parquet" or "csv".
 [export]
-directory = "target/data/"   # Output directory
+directory = "export/"   # Output directory
 format = "parquet"           # Output format, accepted "parquet" or "csv"

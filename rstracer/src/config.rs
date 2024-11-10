@@ -104,7 +104,7 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("network.producer_frequency", 1)?
         .set_default("network.consumer_batch_size", 200)?
         // export
-        .set_default("export.directory", "target/data/")?
+        .set_default("export.directory", "export/")?
         .set_default("export.format", "parquet")?;
 
     let config_file = Path::new(CONFIG_FILE_PATH);
