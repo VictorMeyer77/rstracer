@@ -606,7 +606,7 @@ CREATE OR REPLACE TABLE gold_fact_process_network (
     _id UBIGINT PRIMARY KEY,
     pid UINTEGER,
     packet_id UHUGEINT,
-    local_source BOOLEAN,
+    send BOOLEAN,
     inserted_at TIMESTAMP
 );
 "#;

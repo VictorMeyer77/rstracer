@@ -348,16 +348,18 @@ INSERT OR REPLACE INTO gold_fact_process_network BY NAME
             created_at,
             source_address AS address,
             source_port AS port,
-            TRUE AS local_source,
+            TRUE AS send,
         FROM gold_fact_network_ip
+        WHERE HOST(source_address) IN (SELECT address FROM gold_dim_network_local_ip)
         UNION
         SELECT
             _id,
             created_at,
             destination_address AS address,
             destination_port AS port,
-            FALSE AS local_source,
+            FALSE AS send,
         FROM gold_fact_network_ip
+        WHERE HOST(destination_address) IN (SELECT address FROM gold_dim_network_local_ip)
     ),
     socket AS
     (
@@ -366,26 +368,13 @@ INSERT OR REPLACE INTO gold_fact_process_network BY NAME
         WHERE source_port IS NOT NULL
     )
     SELECT
-        HASH(socket.pid, ip_packet._id, ip_packet.local_source) AS _id,
+        HASH(socket.pid, ip_packet._id, ip_packet.send) AS _id,
         socket.pid,
         ip_packet._id AS packet_id,
-        ip_packet.local_source,
+        ip_packet.send,
         CURRENT_TIMESTAMP AS inserted_at,
     FROM ip_packet
-    INNER JOIN (SELECT * FROM socket WHERE address IS NOT NULL) socket
-    ON HOST(ip_packet.address) = HOST(socket.address)
-    AND ip_packet.port = socket.port
-    AND ip_packet.created_at >= socket.started_at
-    AND ip_packet.created_at <= socket.inserted_at
-    UNION ALL
-    SELECT
-        HASH(socket.pid, ip_packet._id, ip_packet.local_source) AS _id,
-        socket.pid,
-        ip_packet._id AS packet_id,
-        ip_packet.local_source,
-        CURRENT_TIMESTAMP AS inserted_at,
-    FROM ip_packet
-    INNER JOIN (SELECT * FROM socket WHERE address IS NULL) socket
+    INNER JOIN socket
     ON ip_packet.port = socket.port
     AND ip_packet.created_at >= socket.started_at
     AND ip_packet.created_at <= socket.inserted_at
