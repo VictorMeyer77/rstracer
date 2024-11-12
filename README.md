@@ -50,12 +50,10 @@ No additional libraries are required on macOS.
 
 **rstracer** is not yet available on [crates.io](https://crates.io/).
 
-To install directly from GitHub:
+To install directly from GitHub in your _.cargo/bin_ directory:
 
 ```shell
-git clone https://github.com/VictorMeyer77/rstracer.git
-cd rstracer
-cargo build --release
+cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.0-alpha
 ```
 
 ## Usage
@@ -64,7 +62,7 @@ Due to network analysis capabilities, the binary must be run
 with administrative permissions:
 
 ```shell
-sudo target/release/rstracer
+sudo rstracer
 ```
 
 ## Configuration
