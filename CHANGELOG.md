@@ -1,0 +1,37 @@
+<!-- markdownlint-configure-file { "MD013": { "line_length": 100 }, "MD024": false } -->
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+Log types:
+
+- `added` for new features.
+- `changed` for changes in existing functionality.
+- `fixed` for any bug fixes.
+- `removed` for features removed in this release.
+- `security` to invite users to upgrade in case of vulnerabilities.
+
+## [Unreleased]
+
+### Added
+
+- Export parquet or csv
+- User dim gold table
+
+### Changed
+
+- Gold table schema
+- Move rstracer.toml in the root
+- Separate lsof / and i
+
+### Fixed
+
+### Removed
+
+### Security
+
+## [0.1.0-alpha](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0-alpha) - 2024/11/31
+
+### Added
+
+- Initial release
