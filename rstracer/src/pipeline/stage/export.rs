@@ -77,7 +77,7 @@ mod tests {
             .filter(|entry| entry.path().is_file())
             .count();
 
-        assert_eq!(count, 16);
+        assert_eq!(count, 17);
         fs::remove_dir_all(test_path).unwrap();
     }
 
@@ -98,7 +98,7 @@ mod tests {
             .filter(|entry| entry.path().is_file())
             .count();
 
-        assert_eq!(count, 16);
+        assert_eq!(count, 17);
         fs::remove_dir_all(test_path).unwrap();
     }
 }

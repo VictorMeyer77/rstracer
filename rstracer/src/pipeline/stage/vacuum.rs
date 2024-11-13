@@ -33,10 +33,10 @@ mod tests {
             gold: 1000,
         };
         let request = request(&vacuum_config);
-        println!("{:?}", request);
+
         assert!(!request.contains("gold_file_"));
         assert!(!request.contains("_tech_"));
-        assert_eq!(request.matches("DELETE FROM").count(), 36);
+        assert_eq!(request.matches("DELETE FROM").count(), 37);
         assert!(request.contains(
             "DELETE FROM bronze_process_list WHERE inserted_at + '15 seconds' < CURRENT_TIMESTAMP"
         ));

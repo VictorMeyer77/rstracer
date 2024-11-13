@@ -273,8 +273,52 @@ DELETE FROM gold_dim_network_foreign_ip
 WHERE address IN (SELECT address FROM gold_dim_network_local_ip);
 COMMIT;"#;
 
+const GOLD_DIM_NETWORK_HOST: &str = r#"
+INSERT OR REPLACE INTO gold_dim_network_host BY NAME
+(
+    SELECT DISTINCT
+        _id,
+        address,
+        host,
+        CURRENT_TIMESTAMP AS inserted_at
+    FROM
+    (
+        SELECT
+            HASH(source_address) AS _id,
+            source_address AS address,
+            HOST(source_address) AS host,
+        FROM gold_dim_network_socket
+        WHERE source_address IS NOT NULL
+        UNION ALL
+        SELECT
+            HASH(address) AS _id,
+            address,
+            HOST(address) AS host,
+        FROM gold_dim_network_local_ip
+        UNION ALL
+        SELECT
+            HASH(address) AS _id,
+            address,
+            HOST(address) AS host,
+        FROM gold_dim_network_foreign_ip
+        UNION ALL
+        SELECT
+            HASH(source_address) AS _id,
+            source_address,
+            HOST(source_address) AS host,
+        FROM gold_fact_network_ip
+        UNION ALL
+        SELECT
+            HASH(destination_address) AS _id,
+            destination_address,
+            HOST(destination_address) AS host,
+        FROM gold_fact_network_ip
+    )
+)
+;"#;
+
 const GOLD_FACT_PROCESS: &str = r#"
-INSERT OR IGNORE INTO gold_fact_process BY NAME
+INSERT OR REPLACE INTO gold_fact_process BY NAME
 (
 SELECT DISTINCT
     pid,
@@ -288,7 +332,7 @@ FROM silver_process_list
 ;"#;
 
 const GOLD_FACT_FILE_REG: &str = r#"
-INSERT OR IGNORE INTO gold_fact_file_reg BY NAME
+INSERT OR REPLACE INTO gold_fact_file_reg BY NAME
 (
 SELECT DISTINCT
     pid,
@@ -415,14 +459,15 @@ INSERT INTO gold_tech_table_count BY NAME
     SELECT 28 AS _id, 'gold_dim_network_open_port' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_open_port UNION
     SELECT 29 AS _id, 'gold_dim_network_local_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_local_ip UNION
     SELECT 30 AS _id, 'gold_dim_network_foreign_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_foreign_ip UNION
-    SELECT 31 AS _id, 'gold_fact_process' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process UNION
-    SELECT 32 AS _id, 'gold_fact_file_reg' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_file_reg UNION
-    SELECT 33 AS _id, 'gold_fact_network_packet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_packet UNION
-    SELECT 34 AS _id, 'gold_fact_network_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_ip UNION
-    SELECT 35 AS _id, 'gold_fact_process_network' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process_network UNION
-    SELECT 36 AS _id, 'gold_file_service' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_service UNION
-    SELECT 37 AS _id, 'gold_file_host' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_host UNION
-    SELECT 38 AS _id, 'gold_file_user' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_user
+    SELECT 31 AS _id, 'gold_dim_network_host' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_host UNION
+    SELECT 32 AS _id, 'gold_fact_process' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process UNION
+    SELECT 33 AS _id, 'gold_fact_file_reg' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_file_reg UNION
+    SELECT 34 AS _id, 'gold_fact_network_packet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_packet UNION
+    SELECT 35 AS _id, 'gold_fact_network_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_network_ip UNION
+    SELECT 36 AS _id, 'gold_fact_process_network' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process_network UNION
+    SELECT 37 AS _id, 'gold_file_service' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_service UNION
+    SELECT 38 AS _id, 'gold_file_host' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_host UNION
+    SELECT 39 AS _id, 'gold_file_user' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_file_user
 )
 ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at,
@@ -478,13 +523,14 @@ ON CONFLICT DO UPDATE SET
 
 pub fn request() -> String {
     format!(
-        "{} {} {} {} {} {} {} {} {} {} {} {} {}",
+        "{} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         GOLD_DIM_PROCESS,
         GOLD_DIM_FILE_REG,
         GOLD_DIM_NETWORK_SOCKET,
         GOLD_DIM_NETWORK_OPEN_PORT,
         GOLD_DIM_NETWORK_LOCAL_IP,
         GOLD_DIM_NETWORK_FOREIGN_IP,
+        GOLD_DIM_NETWORK_HOST,
         GOLD_FACT_PROCESS,
         GOLD_FACT_FILE_REG,
         GOLD_FACT_NETWORK_PACKET,

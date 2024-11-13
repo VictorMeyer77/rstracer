@@ -547,6 +547,15 @@ CREATE OR REPLACE TABLE gold_dim_network_foreign_ip (
 );
 "#;
 
+const GOLD_DIM_NETWORK_HOST: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_host (
+    _id UBIGINT PRIMARY KEY,
+    address INET,
+    host TEXT,
+    inserted_at TIMESTAMP,
+);
+"#;
+
 // GOLD FACT
 
 const GOLD_FACT_PROCESS: &str = r#"
@@ -639,7 +648,7 @@ CREATE OR REPLACE TABLE gold_tech_chrono (
 pub fn create_schema_request() -> String {
     format!(
         r#"{} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {} {}
-           {} {} {} {} {} {} {} {} {} {} {} {}"#,
+           {} {} {} {} {} {} {} {} {} {} {} {} {}"#,
         BRONZE_PROCESS_LIST,
         BRONZE_OPEN_FILES,
         BRONZE_NETWORK_PACKET,
@@ -674,6 +683,7 @@ pub fn create_schema_request() -> String {
         GOLD_DIM_NETWORK_OPEN_PORT,
         GOLD_DIM_NETWORK_LOCAL_IP,
         GOLD_DIM_NETWORK_FOREIGN_IP,
+        GOLD_DIM_NETWORK_HOST,
         GOLD_FACT_PROCESS,
         GOLD_FACT_FILE_REG,
         GOLD_FACT_NETWORK_PACKET,
@@ -711,7 +721,7 @@ pub mod tests {
 
         if let Some(row) = rows.next().unwrap() {
             let count: usize = row.get(0).unwrap();
-            assert_eq!(count, 41);
+            assert_eq!(count, 42);
         }
     }
 }
