@@ -617,7 +617,6 @@ const GOLD_TECH_TABLE_COUNT: &str = r#"
 CREATE OR REPLACE TABLE gold_tech_table_count (
 	_id USMALLINT PRIMARY KEY,
 	name TEXT,
-	min_count BIGINT,
 	max_count BIGINT,
 	last_count BIGINT,
 	inserted_at TIMESTAMP
