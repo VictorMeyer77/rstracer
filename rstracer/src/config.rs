@@ -2,6 +2,8 @@ use crate::pipeline::error::Error;
 use config;
 use serde::Deserialize;
 use std::path::Path;
+use tracing::Level;
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
 
 const CONFIG_FILE_PATH: &str = "rstracer.toml";
 
@@ -15,6 +17,7 @@ pub struct Config {
     pub vacuum: VacuumConfig,
     pub export: ExportConfig,
     pub schedule: ScheduleConfig,
+    pub logger: LoggerConfig,
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -74,6 +77,13 @@ impl ScheduleConfig {
     }
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct LoggerConfig {
+    pub level: String,
+    pub directory: Option<String>,
+    pub rotation: Option<String>,
+}
+
 pub fn read_config() -> Result<Config, Error> {
     let mut config = config::Config::builder()
         .set_default("in_memory", "false")?
@@ -105,7 +115,9 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("network.consumer_batch_size", 200)?
         // export
         .set_default("export.directory", "export/")?
-        .set_default("export.format", "parquet")?;
+        .set_default("export.format", "parquet")?
+        // export
+        .set_default("logger.level", "INFO")?;
 
     let config_file = Path::new(CONFIG_FILE_PATH);
     if config_file.exists() {
@@ -115,4 +127,45 @@ pub fn read_config() -> Result<Config, Error> {
     let config = config.build()?;
 
     Ok(config.try_deserialize()?)
+}
+
+pub fn subscribe_logger(config: &LoggerConfig) {
+    let level = match config.level.to_uppercase().as_str() {
+        "TRACE" => Level::TRACE,
+        "DEBUG" => Level::DEBUG,
+        "INFO" => Level::INFO,
+        "WARN" => Level::WARN,
+        "ERROR" => Level::ERROR,
+        level => panic!("Unknown logger level '{level}'"),
+    };
+
+    if let Some(directory) = &config.directory {
+        let rotation = if let Some(rotation) = &config.rotation {
+            match rotation.to_uppercase().as_str() {
+                "MINUTELY" => Rotation::MINUTELY,
+                "HOURLY" => Rotation::HOURLY,
+                "DAILY" => Rotation::DAILY,
+                rotation => panic!("Unknown log rotation '{rotation}'"),
+            }
+        } else {
+            Rotation::HOURLY
+        };
+        let appender = RollingFileAppender::new(rotation, directory, "rstracer.log");
+        tracing_subscriber::fmt()
+            .with_max_level(level)
+            .with_file(true)
+            .with_line_number(true)
+            .with_thread_ids(true)
+            .with_target(false)
+            .with_writer(appender)
+            .init();
+    } else {
+        tracing_subscriber::fmt()
+            .with_max_level(level)
+            .with_file(true)
+            .with_line_number(true)
+            .with_thread_ids(true)
+            .with_target(false)
+            .init();
+    }
 }

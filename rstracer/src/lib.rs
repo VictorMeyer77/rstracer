@@ -1,4 +1,4 @@
-use crate::config::read_config;
+use crate::config::{read_config, subscribe_logger};
 use crate::pipeline::database::{close_connection, execute_request};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::create_schema_request;
@@ -20,6 +20,7 @@ pub mod pipeline;
 
 pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let config = read_config()?;
+    subscribe_logger(&config.logger);
     execute_request(&create_schema_request(), config.in_memory)?;
 
     let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =

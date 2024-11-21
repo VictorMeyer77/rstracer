@@ -88,5 +88,27 @@ consumer_batch_size = 200    # Packets read per batch
 # - `directory`: The directory where the output files will be stored. If it does not exist, it will be created automatically.
 # - `format`: Specifies the export file format. Accepted values are "parquet" or "csv".
 [export]
-directory = "export/"   # Output directory
+directory = "export/"        # Output directory
 format = "parquet"           # Output format, accepted "parquet" or "csv"
+
+# [Logger]
+# Configuration for application logging settings.
+# - `level`: Specifies the logging level for the application. Accepted values are:
+#  - "TRACE"
+#  - "DEBUG"
+#  - "INFO"
+#  - "WARN"
+#  - "ERROR"
+# - `directory`: The directory where log files will be stored.
+#   If the directory does not exist:
+#    - It will be created automatically if valid.
+#    - If left empty or invalid, no logging files will be created.
+# - `rotation`: Specifies the log file rotation policy. Accepted values are:
+#  - "MINUTELY"
+#  - "HOURLY"
+#  - "DAILY"
+# Default is "HOURLY".
+[logger]
+level = "INFO"                # Logging level
+directory = "./.log"          # Output directory for log files
+rotation = "HOURLY"           # Log rotation policy

@@ -17,6 +17,7 @@ Log types:
 
 - Export parquet or csv
 - User dim gold table
+- Logger subscriber configuration
 
 ### Changed
 
