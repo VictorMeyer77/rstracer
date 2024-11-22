@@ -101,17 +101,17 @@ pub fn read_config() -> Result<Config, Error> {
         .set_default("request.channel_size", 100)?
         .set_default("request.consumer_batch_size", 20)?
         // ps
-        .set_default("ps.producer_frequency", 3)?
+        .set_default("ps.producer_frequency", 3000)?
         .set_default("ps.consumer_batch_size", 200)?
         // lsof regular
-        .set_default("lsof.regular.producer_frequency", 20)?
+        .set_default("lsof.regular.producer_frequency", 20000)?
         .set_default("lsof.regular.consumer_batch_size", 200)?
         // lsof network
-        .set_default("lsof.network.producer_frequency", 3)?
+        .set_default("lsof.network.producer_frequency", 3000)?
         .set_default("lsof.network.consumer_batch_size", 200)?
         // network
         .set_default("network.channel_size", 500)?
-        .set_default("network.producer_frequency", 1)?
+        .set_default("network.producer_frequency", 1000)?
         .set_default("network.consumer_batch_size", 200)?
         // export
         .set_default("export.directory", "export/")?

@@ -24,6 +24,7 @@ Log types:
 - Gold table schema
 - Move rstracer.toml in the root
 - Separate lsof / and i
+- Evaluate created_at as millis
 
 ### Fixed
 

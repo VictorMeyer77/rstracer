@@ -3,8 +3,8 @@ use crate::pipeline::database::{close_connection, execute_request};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::create_schema_request;
 use crate::pipeline::{
-    execute_request_task, execute_schedule_request_task, network_capture_sink_task, open_file_task,
-    process_task,
+    execute_final_schedule_request, execute_request_task, execute_schedule_request_task,
+    network_capture_sink_task, open_file_task, process_task,
 };
 use lsof::lsof::FileType;
 use network::capture::Capture;
@@ -65,6 +65,7 @@ pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         network_capture_sink_task,
     );
 
+    execute_final_schedule_request(&config)?;
     close_connection(config.in_memory)?;
 
     execute_schedule_request_result?;

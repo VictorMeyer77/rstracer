@@ -49,38 +49,38 @@ consumer_batch_size = 20     # Number of requests executed per batch
 
 # [Process Monitor (`ps` command)]
 # The `ps` command lists active processes.
-# - `producer_frequency`: The number of seconds to wait between two `ps` command executions.
+# - `producer_frequency`: The number of milliseconds to wait between two `ps` command executions.
 # - `consumer_batch_size`: Number of rows per batch in the `VALUES` section of an `INSERT INTO` statement.
 #   A value around 200 is recommended.
 [ps]
-producer_frequency = 3       # Time interval (in seconds) between consecutive executions of `ps`
+producer_frequency = 3000    # Time interval (in milliseconds) between consecutive executions of `ps`
 consumer_batch_size = 200    # Rows per batch in the `INSERT INTO` statements
 
 # [File Monitor (`lsof` command)]
 # The `lsof` command lists all open files. To manage the output volume, results are filtered to include only network and regular files.
 # `lsof` network files produce fewer lines, but they are essential for network analysis. In contrast, `lsof` on the root directory (`/`) produces many more lines, which are less useful for this purpose.
 # Therefore, separate configurations have been created for each type.
-# - `producer_frequency`: The time interval, in seconds, between consecutive executions of `lsof`.
+# - `producer_frequency`: The time interval, in milliseconds, between consecutive executions of `lsof`.
 # - `consumer_batch_size`: The number of rows per batch for the `VALUES` section in an `INSERT INTO` statement.
 #   A recommended value is around 200.
 
 [lsof.regular]
-producer_frequency = 20      # Time interval (in seconds) between consecutive executions of `lsof /`
+producer_frequency = 20000   # Time interval (in milliseconds) between consecutive executions of `lsof /`
 consumer_batch_size = 200    # Number of rows per batch in `INSERT INTO` statements
 
 [lsof.network]
-producer_frequency = 3       # Time interval (in seconds) between consecutive executions of `lsof -i`
+producer_frequency = 3000    # Time interval (in milliseconds) between consecutive executions of `lsof -i`
 consumer_batch_size = 200    # Number of rows per batch in `INSERT INTO` statements
 
 # [Network Packet Capture]
 # A thread listens to all open interfaces and writes full packet objects to a queue. Another thread
 # reads this queue and splits each packet into requests for different tables (ethernet, ipv4, etc.).
 # - `channel_size`: Maximum size of the packet queue.
-# - `producer_frequency`: Number of seconds between consecutive queue reads.
+# - `producer_frequency`: Number of milliseconds between consecutive queue reads.
 # - `consumer_batch_size`: Number of packets read per batch.
 [network]
 channel_size = 500           # Maximum number of packets in the queue
-producer_frequency = 1       # Time interval (in seconds) between consecutive reads from the queue
+producer_frequency = 1000    # Time interval (in milliseconds) between consecutive reads from the queue
 consumer_batch_size = 200    # Packets read per batch
 
 # [Export Task]
