@@ -53,11 +53,19 @@ impl Unix {
 }
 
 fn split_of_per_process(output: &str) -> Vec<String> {
-    output.split("\np").map(String::from).collect()
+    if output.is_empty() {
+        vec![]
+    } else {
+        output.split("\np").map(String::from).collect()
+    }
 }
 
 fn split_process_per_rows(of_per_process: &str) -> Vec<String> {
-    of_per_process.split("\nf").map(String::from).collect()
+    if of_per_process.is_empty() {
+        vec![]
+    } else {
+        of_per_process.split("\nf").map(String::from).collect()
+    }
 }
 
 fn deserialize_header(header: &str) -> Result<(u32, i16, String), Error> {
@@ -139,10 +147,22 @@ n/Library/Preferences/Logging/.plist-cache.DCgGV34s
     }
 
     #[test]
+    fn test_split_of_per_process_with_empty() {
+        let rows = split_of_per_process("");
+        assert_eq!(rows.len(), 0);
+    }
+
+    #[test]
     fn test_split_process_per_rows() {
         let row = split_of_per_process(&create_lsof_output())[0].clone();
         let rows = split_process_per_rows(&row);
         assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn test_split_process_per_rows_with_empty() {
+        let rows = split_process_per_rows("");
+        assert_eq!(rows.len(), 0);
     }
 
     #[test]
