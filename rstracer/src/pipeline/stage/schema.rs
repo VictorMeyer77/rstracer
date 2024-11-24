@@ -50,10 +50,10 @@ CREATE OR REPLACE TABLE bronze_network_packet (
 );
 "#;
 
-const BRONZE_NETWORK_INTERFACE_ADDRESS: &str = r#"
-CREATE SEQUENCE IF NOT EXISTS bronze_network_interface_address_serial;
-CREATE OR REPLACE TABLE bronze_network_interface_address (
-    _id INTEGER DEFAULT nextval('bronze_network_interface_address_serial'),
+const BRONZE_NETWORK_INTERFACE: &str = r#"
+CREATE SEQUENCE IF NOT EXISTS bronze_network_interface_serial;
+CREATE OR REPLACE TABLE bronze_network_interface (
+    _id INTEGER DEFAULT nextval('bronze_network_interface_serial'),
     interface TEXT,
     address TEXT,
     netmask TEXT,
@@ -321,8 +321,8 @@ CREATE OR REPLACE TABLE silver_network_packet (
 );
 "#;
 
-const SILVER_NETWORK_INTERFACE_ADDRESS: &str = r#"
-CREATE OR REPLACE TABLE silver_network_interface_address (
+const SILVER_NETWORK_INTERFACE: &str = r#"
+CREATE OR REPLACE TABLE silver_network_interface (
     _id INTEGER PRIMARY KEY,
     interface TEXT,
     address INET,
@@ -500,6 +500,19 @@ CREATE OR REPLACE TABLE gold_dim_file_reg (
 );
 "#;
 
+const GOLD_DIM_NETWORK_INTERFACE: &str = r#"
+CREATE OR REPLACE TABLE gold_dim_network_interface (
+    _id UBIGINT PRIMARY KEY,
+    interface TEXT,
+    address INET,
+    broadcast_address INET,
+    destination_address INET,
+    network TEXT,
+	started_at TIMESTAMP,
+	inserted_at TIMESTAMP,
+);
+"#;
+
 const GOLD_DIM_NETWORK_SOCKET: &str = r#"
 CREATE OR REPLACE TABLE gold_dim_network_socket (
     _id UBIGINT PRIMARY KEY,
@@ -524,16 +537,6 @@ CREATE OR REPLACE TABLE gold_dim_network_open_port (
     started_at TIMESTAMP,
     inserted_at TIMESTAMP,
     PRIMARY KEY (pid, port)
-);
-"#;
-
-const GOLD_DIM_NETWORK_LOCAL_IP: &str = r#"
-CREATE OR REPLACE TABLE gold_dim_network_local_ip (
-    _id UBIGINT PRIMARY KEY,
-    address INET,
-    interface TEXT,
-    started_at TIMESTAMP,
-    inserted_at TIMESTAMP,
 );
 "#;
 
@@ -652,7 +655,7 @@ pub fn create_schema_request() -> String {
         BRONZE_PROCESS_LIST,
         BRONZE_OPEN_FILES,
         BRONZE_NETWORK_PACKET,
-        BRONZE_NETWORK_INTERFACE_ADDRESS,
+        BRONZE_NETWORK_INTERFACE,
         BRONZE_NETWORK_ETHERNET,
         BRONZE_NETWORK_IPV4,
         BRONZE_NETWORK_IPV6,
@@ -668,7 +671,7 @@ pub fn create_schema_request() -> String {
         SILVER_PROCESS_LIST,
         SILVER_OPEN_FILES,
         SILVER_NETWORK_PACKET,
-        SILVER_NETWORK_INTERFACE_ADDRESS,
+        SILVER_NETWORK_INTERFACE,
         SILVER_NETWORK_ETHERNET,
         SILVER_NETWORK_DNS,
         SILVER_NETWORK_IP,
@@ -679,9 +682,9 @@ pub fn create_schema_request() -> String {
         GOLD_FILE_USER,
         GOLD_DIM_PROCESS,
         GOLD_DIM_FILE_REG,
+        GOLD_DIM_NETWORK_INTERFACE,
         GOLD_DIM_NETWORK_SOCKET,
         GOLD_DIM_NETWORK_OPEN_PORT,
-        GOLD_DIM_NETWORK_LOCAL_IP,
         GOLD_DIM_NETWORK_FOREIGN_IP,
         GOLD_DIM_NETWORK_HOST,
         GOLD_FACT_PROCESS,

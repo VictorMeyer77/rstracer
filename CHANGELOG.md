@@ -18,12 +18,13 @@ Log types:
 - Export parquet or csv
 - User dim gold table
 - Logger subscriber configuration
+- Add gold layer for network interface
 
 ### Changed
 
 - Gold table schema
 - Move rstracer.toml in the root
-- Separate lsof / and i
+- Separate lsof / and -i
 - Evaluate created_at as millis
 
 ### Fixed

@@ -182,7 +182,7 @@ fn device_addresses_to_sql(device: &Device) -> String {
         };
 
         request_buffer.push_str(&format!(
-            r#"INSERT OR IGNORE INTO bronze_network_interface_address (
+            r#"INSERT OR IGNORE INTO bronze_network_interface (
                         interface,
                         address,
                         netmask,

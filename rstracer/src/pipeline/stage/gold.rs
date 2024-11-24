@@ -58,6 +58,35 @@ ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at
 ;"#;
 
+const GOLD_DIM_NETWORK_INTERFACE: &str = r#"
+INSERT INTO gold_dim_network_interface BY NAME
+(
+    SELECT
+        HASH(interface, address) AS _id,
+        interface,
+        address,
+        broadcast_address,
+        destination_address,
+        HOST(NETWORK(address)) AS network,
+        inserted_at AS started_at,
+        current_timestamp AS inserted_at,
+    FROM
+    (
+        SELECT
+            interface,
+            address,
+            broadcast_address,
+            destination_address,
+            inserted_at,
+            ROW_NUMBER() OVER (PARTITION BY interface, address ORDER BY inserted_at ASC) AS row_num
+        FROM silver_network_interface
+    )
+    WHERE row_num = 1
+)
+ON CONFLICT DO UPDATE SET
+    inserted_at = EXCLUDED.inserted_at
+;"#;
+
 const GOLD_DIM_NETWORK_SOCKET: &str = r#"
 INSERT INTO gold_dim_network_socket BY NAME
 (
@@ -146,69 +175,6 @@ ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at;
 ;"#;
 
-const GOLD_DIM_NETWORK_LOCAL_IP: &str = r#"
-WITH local_address AS
-(
-    SELECT DISTINCT
-    *
-    FROM
-    (
-        SELECT
-            interface,
-            address
-        FROM silver_network_interface_address
-        UNION ALL
-        SELECT *
-        FROM (
-            VALUES
-                (NULL, '255.255.255.255'::INET),
-                (NULL, 'ff00::/8'::INET)
-        ) AS cast_addr(interface, address)
-    )
-)
-INSERT INTO gold_dim_network_local_ip BY NAME
-(
-SELECT DISTINCT
-    HASH(ip.address::TEXT, adr.interface) AS _id,
-    ip.address,
-    adr.interface,
-    ip.created_at AS started_at,
-    CURRENT_TIMESTAMP AS inserted_at
-FROM
-(
-    SELECT
-        address,
-        interface,
-        created_at,
-        FROM
-        (
-            SELECT
-                *,
-                ROW_NUMBER() OVER (PARTITION BY address, interface ORDER BY created_at ASC) AS row_num
-            FROM
-            (
-                SELECT
-                    source AS address,
-                    interface,
-                    created_at
-                FROM silver_network_ip
-                UNION ALL
-                SELECT
-                    destination AS address,
-                    interface,
-                    created_at
-                FROM silver_network_ip
-            )
-        )
-    WHERE row_num = 1
-) ip
-INNER JOIN local_address adr
-ON ip.address <<= NETWORK(adr.address)
-)
-ON CONFLICT DO UPDATE SET
-    inserted_at = EXCLUDED.inserted_at
-;"#;
-
 // TODO parse/add dns
 const GOLD_DIM_NETWORK_FOREIGN_IP: &str = r#"
 BEGIN;
@@ -221,7 +187,7 @@ WITH local_address AS
         SELECT
             interface,
             address
-        FROM silver_network_interface_address
+        FROM silver_network_interface
         UNION ALL
         SELECT *
         FROM (
@@ -264,13 +230,13 @@ FROM
         )
     WHERE row_num = 1
 ) ip
-LEFT JOIN local_address adr ON ip.address <<= NETWORK(adr.address)
+LEFT JOIN local_address adr ON ip.address = HOST(adr.address)
 WHERE adr.address IS NULL
 )
 ON CONFLICT DO UPDATE SET
     inserted_at = EXCLUDED.inserted_at;
 DELETE FROM gold_dim_network_foreign_ip
-WHERE address IN (SELECT address FROM gold_dim_network_local_ip);
+WHERE HOST(address) IN (SELECT HOST(address) FROM gold_dim_network_interface);
 COMMIT;"#;
 
 const GOLD_DIM_NETWORK_HOST: &str = r#"
@@ -294,12 +260,6 @@ INSERT OR REPLACE INTO gold_dim_network_host BY NAME
             HASH(address) AS _id,
             address,
             HOST(address) AS host,
-        FROM gold_dim_network_local_ip
-        UNION ALL
-        SELECT
-            HASH(address) AS _id,
-            address,
-            HOST(address) AS host,
         FROM gold_dim_network_foreign_ip
         UNION ALL
         SELECT
@@ -313,6 +273,12 @@ INSERT OR REPLACE INTO gold_dim_network_host BY NAME
             destination_address,
             HOST(destination_address) AS host,
         FROM gold_fact_network_ip
+        UNION ALL
+        SELECT
+            HASH(address) AS _id,
+            address,
+            HOST(address) AS host,
+        FROM gold_dim_network_interface
     )
 )
 ;"#;
@@ -394,7 +360,7 @@ INSERT OR REPLACE INTO gold_fact_process_network BY NAME
             source_port AS port,
             TRUE AS send,
         FROM gold_fact_network_ip
-        WHERE HOST(source_address) IN (SELECT address FROM gold_dim_network_local_ip)
+        WHERE HOST(source_address) IN (SELECT HOST(address) FROM gold_dim_network_interface)
         UNION
         SELECT
             _id,
@@ -403,7 +369,7 @@ INSERT OR REPLACE INTO gold_fact_process_network BY NAME
             destination_port AS port,
             FALSE AS send,
         FROM gold_fact_network_ip
-        WHERE HOST(destination_address) IN (SELECT address FROM gold_dim_network_local_ip)
+        WHERE HOST(destination_address) IN (SELECT HOST(address) FROM gold_dim_network_interface)
     ),
     socket AS
     (
@@ -432,7 +398,7 @@ INSERT INTO gold_tech_table_count BY NAME
     SELECT 1 AS _id, 'bronze_open_files' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_open_files UNION
     SELECT 2 AS _id, 'bronze_network_packet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_packet UNION
     SELECT 3 AS _id, 'bronze_network_ethernet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_ethernet UNION
-    SELECT 4 AS _id, 'bronze_network_interface_address' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_interface_address UNION
+    SELECT 4 AS _id, 'bronze_network_interface' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_interface UNION
     SELECT 5 AS _id, 'bronze_network_ipv4' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_ipv4 UNION
     SELECT 6 AS _id, 'bronze_network_ipv6' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_ipv6 UNION
     SELECT 7 AS _id, 'bronze_network_arp' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM bronze_network_arp UNION
@@ -448,16 +414,16 @@ INSERT INTO gold_tech_table_count BY NAME
     SELECT 17 AS _id, 'silver_open_files' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_open_files UNION
     SELECT 18 AS _id, 'silver_network_packet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_packet UNION
     SELECT 19 AS _id, 'silver_network_ethernet' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_ethernet UNION
-    SELECT 20 AS _id, 'silver_network_interface_address' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_interface_address UNION
+    SELECT 20 AS _id, 'silver_network_interface' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_interface UNION
     SELECT 21 AS _id, 'silver_network_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_ip UNION
     SELECT 22 AS _id, 'silver_network_arp' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_arp UNION
     SELECT 23 AS _id, 'silver_network_transport' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_transport UNION
     SELECT 24 AS _id, 'silver_network_dns' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM silver_network_dns UNION
     SELECT 25 AS _id, 'gold_dim_process' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_process UNION
     SELECT 26 AS _id, 'gold_dim_file_reg' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_file_reg UNION
-    SELECT 27 AS _id, 'gold_dim_network_socket' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_socket UNION
-    SELECT 28 AS _id, 'gold_dim_network_open_port' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_open_port UNION
-    SELECT 29 AS _id, 'gold_dim_network_local_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_local_ip UNION
+    SELECT 27 AS _id, 'gold_dim_network_interface' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_interface UNION
+    SELECT 28 AS _id, 'gold_dim_network_socket' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_socket UNION
+    SELECT 29 AS _id, 'gold_dim_network_open_port' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_open_port UNION
     SELECT 30 AS _id, 'gold_dim_network_foreign_ip' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_foreign_ip UNION
     SELECT 31 AS _id, 'gold_dim_network_host' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_dim_network_host UNION
     SELECT 32 AS _id, 'gold_fact_process' AS name, count(*) AS max_count, count(*) AS last_count, CURRENT_TIMESTAMP AS inserted_at FROM gold_fact_process UNION
@@ -526,9 +492,9 @@ pub fn request() -> String {
         "{} {} {} {} {} {} {} {} {} {} {} {} {} {}",
         GOLD_DIM_PROCESS,
         GOLD_DIM_FILE_REG,
+        GOLD_DIM_NETWORK_INTERFACE,
         GOLD_DIM_NETWORK_SOCKET,
         GOLD_DIM_NETWORK_OPEN_PORT,
-        GOLD_DIM_NETWORK_LOCAL_IP,
         GOLD_DIM_NETWORK_FOREIGN_IP,
         GOLD_DIM_NETWORK_HOST,
         GOLD_FACT_PROCESS,

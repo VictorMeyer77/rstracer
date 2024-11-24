@@ -126,8 +126,8 @@ FROM bronze_network_ethernet ethernet LEFT JOIN bronze_network_packet packet ON 
 );
 "#;
 
-const SILVER_NETWORK_INTERFACE_ADDRESS: &str = r#"
-INSERT OR IGNORE INTO silver_network_interface_address BY NAME
+const SILVER_NETWORK_INTERFACE: &str = r#"
+INSERT OR IGNORE INTO silver_network_interface BY NAME
 (
 SELECT
     _id,
@@ -137,7 +137,7 @@ SELECT
     destination_address::INET AS destination_address,
     CURRENT_TIMESTAMP AS inserted_at,
     AGE(inserted_at) AS svr_ingestion_duration
-FROM bronze_network_interface_address
+FROM bronze_network_interface
 );
 "#;
 
@@ -341,7 +341,7 @@ pub fn request() -> String {
         SILVER_PROCESS_LIST,
         SILVER_OPEN_FILES,
         SILVER_NETWORK_PACKET,
-        SILVER_NETWORK_INTERFACE_ADDRESS,
+        SILVER_NETWORK_INTERFACE,
         SILVER_NETWORK_ETHERNET,
         SILVER_NETWORK_DNS,
         SILVER_NETWORK_IP,
