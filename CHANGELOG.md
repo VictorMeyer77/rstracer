@@ -11,7 +11,19 @@ Log types:
 - `removed` for features removed in this release.
 - `security` to invite users to upgrade in case of vulnerabilities.
 
-## [Unreleased]
+## Unreleased
+
+### Added
+
+### Changed
+
+### Fixed
+
+### Removed
+
+### Security
+
+## [0.1.0](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0) - 2024/11/29
 
 ### Added
 
@@ -33,7 +45,7 @@ Log types:
 
 ### Security
 
-## [0.1.0-alpha](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0-alpha) - 2024/11/31
+## [0.1.0-alpha](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0-alpha) - 2024/10/31
 
 ### Added
 

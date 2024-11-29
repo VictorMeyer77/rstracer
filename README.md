@@ -41,10 +41,13 @@ whereas file mode stores data for post-run analysis at a slight performance cost
 
 ```shell
 sudo apt-get update
-sudo apt-get install libpcap-dev
+sudo apt-get install -y \
+    libpcap-dev \
+    git \
+    build-essential \
+    lsof \
+    dnsutils
 ```
-
-No additional libraries are required on macOS.
 
 ## Installation
 
@@ -53,7 +56,7 @@ No additional libraries are required on macOS.
 To install directly from GitHub in your _.cargo/bin_ directory:
 
 ```shell
-cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.0-alpha
+cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.0
 ```
 
 ## Usage
