@@ -79,6 +79,4 @@ Refer to the [rstracer.toml](rstracer.toml) file for customizable options.
 
 1. **System Language**: The `ps` command date parsing requires the system
 language to be set to English.
-2. **In-Memory Database Querying**: In-memory mode currently does not
-support external database queries.
-3. **Platform**: Only available for UNIX-based systems.
+2. **Platform**: Only available for UNIX-based systems.
