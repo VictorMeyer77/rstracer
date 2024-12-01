@@ -1,17 +1,27 @@
 use crate::lsof::error::Error;
-use crate::lsof::{Lsof, OpenFile};
+use crate::lsof::{FileType, Lsof, OpenFile};
 use std::process::{Command, Output};
 
 pub struct Unix;
 
 impl Lsof for Unix {
-    fn exec() -> Result<Vec<OpenFile>, Error> {
-        let mut open_files =
-            Self::parse_output(&String::from_utf8_lossy(&Self::lsof_network()?.stdout))?;
-        open_files.extend(Self::parse_output(&String::from_utf8_lossy(
-            &Self::lsof_mount_file()?.stdout,
-        ))?);
-        Ok(open_files)
+    fn exec(file_type: &FileType) -> Result<Vec<OpenFile>, Error> {
+        match file_type {
+            FileType::REGULAR => Ok(Self::parse_output(&String::from_utf8_lossy(
+                &Self::lsof_mount_file()?.stdout,
+            ))?),
+            FileType::NETWORK => Ok(Self::parse_output(&String::from_utf8_lossy(
+                &Self::lsof_network()?.stdout,
+            ))?),
+            FileType::ALL => {
+                let mut open_files =
+                    Self::parse_output(&String::from_utf8_lossy(&Self::lsof_network()?.stdout))?;
+                open_files.extend(Self::parse_output(&String::from_utf8_lossy(
+                    &Self::lsof_mount_file()?.stdout,
+                ))?);
+                Ok(open_files)
+            }
+        }
     }
 }
 
@@ -43,22 +53,30 @@ impl Unix {
 }
 
 fn split_of_per_process(output: &str) -> Vec<String> {
-    output.split("\np").map(String::from).collect()
+    if output.is_empty() {
+        vec![]
+    } else {
+        output.split("\np").map(String::from).collect()
+    }
 }
 
 fn split_process_per_rows(of_per_process: &str) -> Vec<String> {
-    of_per_process.split("\nf").map(String::from).collect()
+    if of_per_process.is_empty() {
+        vec![]
+    } else {
+        of_per_process.split("\nf").map(String::from).collect()
+    }
 }
 
-fn deserialize_header(header: &str) -> Result<(u32, u32, String), Error> {
+fn deserialize_header(header: &str) -> Result<(u32, i16, String), Error> {
     let headers: Vec<&str> = header.lines().collect();
     let pid: u32 = headers[0].replace('p', "").parse()?;
-    let uid: u32 = headers[2][1..].parse()?;
+    let uid: i16 = headers[2][1..].parse()?;
     let command: String = headers[1][1..].to_string();
     Ok((pid, uid, command))
 }
 
-fn row_to_struct(header: &(u32, u32, String), row: &str) -> OpenFile {
+fn row_to_struct(header: &(u32, i16, String), row: &str) -> OpenFile {
     let fields: Vec<&str> = row.lines().collect();
     let mut buffer_open_file: OpenFile = OpenFile::new(header.0, header.1, &header.2);
     buffer_open_file.fd = fields[0].to_string();
@@ -129,10 +147,22 @@ n/Library/Preferences/Logging/.plist-cache.DCgGV34s
     }
 
     #[test]
+    fn test_split_of_per_process_with_empty() {
+        let rows = split_of_per_process("");
+        assert_eq!(rows.len(), 0);
+    }
+
+    #[test]
     fn test_split_process_per_rows() {
         let row = split_of_per_process(&create_lsof_output())[0].clone();
         let rows = split_process_per_rows(&row);
         assert_eq!(rows.len(), 3);
+    }
+
+    #[test]
+    fn test_split_process_per_rows_with_empty() {
+        let rows = split_process_per_rows("");
+        assert_eq!(rows.len(), 0);
     }
 
     #[test]

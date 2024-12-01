@@ -13,7 +13,13 @@ Cargo.lock
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
 
-# Remove all duck db database files
+# Ignore all duck db database files
 *.db
 *.duckdb
 *.wal
+*.parquet
+*.csv
+
+# Ignore all output files
+export/
+.log/

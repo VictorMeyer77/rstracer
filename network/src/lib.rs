@@ -1,13 +1,15 @@
 use crate::capture::Capture;
 use crate::error::Error;
-use futures::future::join_all;
 use pcap::Device;
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
+use std::thread;
 use std::time::Duration;
 use tokio::sync::mpsc::Sender;
+use tokio::task::JoinHandle;
 use tokio::time::sleep;
-use tracing::{error, info};
+use tracing::{error, info, warn};
 
 pub mod capture;
 pub mod error;
@@ -43,7 +45,7 @@ pub async fn read_device(
             Err(e) => match e {
                 pcap::Error::TimeoutExpired => {}
                 _ => {
-                    error!("{}: {}", &device_name, e);
+                    warn!("{}: {}", &device_name, e);
                     break;
                 }
             },
@@ -55,70 +57,44 @@ pub async fn read_device(
 }
 
 pub async fn producer(sender: Sender<Capture>, stop_flag: &Arc<AtomicBool>) -> Result<(), Error> {
-    let devices: Vec<Device> = Device::list()?
-        .into_iter()
-        .filter(|device| device.flags.is_up() && device.flags.is_running())
-        .collect();
+    let mut tasks: HashMap<String, JoinHandle<Result<(), Error>>> = HashMap::new();
 
-    info!("network producer scan {} devices", devices.len());
+    while !stop_flag.load(Ordering::Relaxed) {
+        let devices: Vec<Device> = Device::list()?
+            .into_iter()
+            .filter(|device| device.flags.is_up() && device.flags.is_running())
+            .collect();
 
-    let tasks: Vec<_> = devices
-        .into_iter()
-        .map(|device| {
-            let sender = sender.clone();
-            let stop_flag = Arc::clone(stop_flag);
-            tokio::spawn(async move { read_device(device, sender, stop_flag).await })
-        })
-        .collect();
-    let results = join_all(tasks).await;
-    for result in results {
-        result??
+        for device in devices {
+            let device_name = device.name.clone();
+            let mut is_running = false;
+            if let Some(task) = tasks.get(&device_name) {
+                is_running = !task.is_finished();
+            }
+            if !is_running {
+                let sender = sender.clone();
+                let stop_flag = Arc::clone(stop_flag);
+                let task =
+                    tokio::spawn(async move { read_device(device, sender, stop_flag).await });
+                tasks.insert(device_name, task);
+            }
+        }
+
+        sleep(Duration::from_secs(10)).await;
     }
 
-    info!("all interface producer stop gracefully");
+    join_device_tasks(&tasks)?;
 
     Ok(())
 }
 
-/*
-#[cfg(test)]
-mod tests {
-
-    use crate::capture::Capture;
-    use crate::*;
-    use std::sync::atomic::{AtomicBool, Ordering};
-    use std::sync::Arc;
-    use std::time::Duration;
-    use tokio::join;
-    use tokio::sync::mpsc::{channel, Receiver, Sender};
-    use tokio::time::sleep;
-
-    #[tokio::test]
-    async fn producer_integration_test() {
-        let (sender, mut receiver): (Sender<Capture>, Receiver<Capture>) = channel(256);
-        let stop_flag = Arc::new(AtomicBool::new(false));
-        let stop_flag_clone = Arc::clone(&stop_flag);
-
-        let producer_task = tokio::spawn(async move {
-            producer(sender, stop_flag_clone).await.unwrap();
-        });
-
-        let stop_task = tokio::spawn(async move {
-            sleep(Duration::from_secs(5)).await;
-            stop_flag.store(true, Ordering::Release);
-        });
-
-        let mut captures: Vec<Capture> = vec![];
-        while let Some(capture) = receiver.recv().await {
-            captures.push(capture);
+fn join_device_tasks(tasks: &HashMap<String, JoinHandle<Result<(), Error>>>) -> Result<(), Error> {
+    for task in tasks.values() {
+        if !task.is_finished() {
+            thread::sleep(Duration::from_millis(10));
+            join_device_tasks(tasks)?;
         }
-
-        let (producer_task_result, stop_task_result) = join!(producer_task, stop_task);
-        producer_task_result.unwrap();
-        stop_task_result.unwrap();
-
-        //assert!(captures.len() > 1);
-        //assert!(captures.first().unwrap().data_link.is_some())
     }
+    info!("all interface producer stop gracefully");
+    Ok(())
 }
-*/

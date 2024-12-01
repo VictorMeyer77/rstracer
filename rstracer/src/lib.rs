@@ -1,11 +1,12 @@
-use crate::config::read_config;
+use crate::config::{read_config, subscribe_logger};
 use crate::pipeline::database::{close_connection, execute_request};
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::schema::create_schema_request;
 use crate::pipeline::{
-    execute_request_task, execute_schedule_request_task, network_capture_sink_task, open_file_task,
-    process_task,
+    execute_final_schedule_request, execute_request_task, execute_schedule_request_task,
+    network_capture_sink_task, open_file_task, process_task,
 };
+use lsof::lsof::FileType;
 use network::capture::Capture;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -19,6 +20,7 @@ pub mod pipeline;
 
 pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let config = read_config()?;
+    subscribe_logger(&config.logger);
     execute_request(&create_schema_request(), config.in_memory)?;
 
     let (sender_request, receiver_request): (Sender<String>, Receiver<String>) =
@@ -29,7 +31,18 @@ pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
     let execute_schedule_request_task = start_schedule_request_task(&config, &stop_flag);
     let execute_request_task = start_execute_request_task(&config, receiver_request, &stop_flag);
     let process_task = start_process_task(&config, &sender_request, &stop_flag);
-    let open_file_task = start_open_file_task(&config, &sender_request, &stop_flag);
+    let open_file_regular_task = start_open_file_task(
+        &config.lsof.regular,
+        FileType::REGULAR,
+        &sender_request,
+        &stop_flag,
+    );
+    let open_file_network_task = start_open_file_task(
+        &config.lsof.network,
+        FileType::NETWORK,
+        &sender_request,
+        &stop_flag,
+    );
     let network_capture_source_task = start_network_capture_source_task(sender_capture, &stop_flag);
     let network_capture_sink_task =
         start_network_capture_sink_task(&config, receiver_capture, &sender_request, &stop_flag);
@@ -38,24 +51,28 @@ pub async fn run(stop_flag: Arc<AtomicBool>) -> Result<(), Error> {
         execute_schedule_request_result,
         execute_request_result,
         process_result,
-        open_file_result,
+        open_file_regular_result,
+        open_file_network_result,
         network_capture_source_result,
         network_capture_sink_result,
     ) = join!(
         execute_schedule_request_task,
         execute_request_task,
         process_task,
-        open_file_task,
+        open_file_regular_task,
+        open_file_network_task,
         network_capture_source_task,
         network_capture_sink_task,
     );
 
+    execute_final_schedule_request(&config)?;
     close_connection(config.in_memory)?;
 
     execute_schedule_request_result?;
     execute_request_result?;
     process_result?;
-    open_file_result?;
+    open_file_regular_result?;
+    open_file_network_result?;
     network_capture_source_result?;
     network_capture_sink_result?;
 
@@ -114,16 +131,18 @@ fn start_process_task(
 }
 
 fn start_open_file_task(
-    config: &config::Config,
+    config: &config::ChannelConfig,
+    file_type: FileType,
     sender_request: &Sender<String>,
     stop_flag: &Arc<AtomicBool>,
 ) -> JoinHandle<()> {
-    let config_clone = config.lsof.clone();
+    let config_clone = config.clone();
     let sender_clone = sender_request.clone();
     let stop_flag_read = stop_flag.clone();
     let stop_flag_write = stop_flag.clone();
     tokio::spawn(async move {
-        if let Err(e) = open_file_task(&config_clone, sender_clone, stop_flag_read).await {
+        if let Err(e) = open_file_task(&config_clone, file_type, sender_clone, stop_flag_read).await
+        {
             stop_flag_write.store(true, Ordering::Release);
             error!("{}", e);
         }

@@ -79,7 +79,7 @@ impl BronzeBatch for Process {
     }
 
     fn to_insert_value(&self) -> String {
-        format!("({}, {}, {}, TO_TIMESTAMP({}), {}, {}, '{}', '{}', TO_TIMESTAMP({8}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({8})::TIMESTAMP))",
+        format!("({}, {}, {}, TO_TIMESTAMP({}), {}, {}, '{}', '{}', EPOCH_MS({8})::TIMESTAMP, CURRENT_TIMESTAMP, AGE(EPOCH_MS({8})::TIMESTAMP))",
             self.pid,
             self.ppid,
             self.uid,
@@ -101,7 +101,7 @@ impl BronzeBatch for OpenFile {
 
     fn to_insert_value(&self) -> String {
         format!(
-            r#"('{}', {}, {}, '{}', '{}', '{}', {}, '{}', '{}', TO_TIMESTAMP({9}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({9})::TIMESTAMP))"#,
+            r#"('{}', {}, {}, '{}', '{}', '{}', {}, '{}', '{}', EPOCH_MS({9})::TIMESTAMP, CURRENT_TIMESTAMP, AGE(EPOCH_MS({9})::TIMESTAMP))"#,
             self.command.replace('\'', "\""),
             self.pid,
             self.uid,
@@ -128,7 +128,7 @@ impl Bronze for Capture {
             created_at,
             inserted_at,
             brz_ingestion_duration
-            ) VALUES ({}, '{}', {}, TO_TIMESTAMP({3}), CURRENT_TIMESTAMP, AGE(TO_TIMESTAMP({3})::TIMESTAMP));"#,
+            ) VALUES ({}, '{}', {}, EPOCH_MS({3})::TIMESTAMP, CURRENT_TIMESTAMP, AGE(EPOCH_MS({3})::TIMESTAMP));"#,
             row_id,
             clone.device.name,
             clone.packet.len(),
@@ -182,7 +182,7 @@ fn device_addresses_to_sql(device: &Device) -> String {
         };
 
         request_buffer.push_str(&format!(
-            r#"INSERT OR IGNORE INTO bronze_network_interface_address (
+            r#"INSERT OR IGNORE INTO bronze_network_interface (
                         interface,
                         address,
                         netmask,
@@ -638,7 +638,7 @@ fn bronze_tls(tls: Tls, packet_id: u128) -> String {
 mod tests {
     use super::*;
     use crate::pipeline::stage::tests::create_test_connection;
-    use lsof::lsof::lsof;
+    use lsof::lsof::{lsof, FileType};
     use ps::ps::ps;
 
     #[derive(Debug)]
@@ -849,7 +849,7 @@ mod tests {
     #[test]
     fn test_insert_open_files() {
         let connection = create_test_connection();
-        let processes = lsof().unwrap();
+        let processes = lsof(&FileType::ALL).unwrap();
         connection
             .execute_batch(&create_insert_batch_request(processes))
             .unwrap();

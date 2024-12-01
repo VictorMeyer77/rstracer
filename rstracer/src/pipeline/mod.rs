@@ -2,9 +2,9 @@ use crate::config::{ChannelConfig, Config};
 use crate::pipeline::database::execute_request;
 use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
-use crate::pipeline::stage::{dimension, gold, silver, vacuum};
+use crate::pipeline::stage::{export, file, gold, silver, vacuum};
 use chrono::Local;
-use lsof::lsof::{lsof, OpenFile};
+use lsof::lsof::{lsof, FileType, OpenFile};
 use network::capture::Capture;
 use ps::ps::{ps, Process};
 use std::collections::HashMap;
@@ -29,7 +29,7 @@ pub async fn execute_request_task(
 ) -> Result<(), Error> {
     let mut receiver_request = receiver_request;
 
-    while !stop_flag.load(Ordering::Relaxed) {
+    while !stop_flag.load(Ordering::Relaxed) || !receiver_request.is_empty() {
         let mut request_buffer: Vec<String> = Vec::with_capacity(config.consumer_batch_size);
 
         info!(
@@ -77,25 +77,40 @@ fn get_schedule_request_task(config: &Config) -> Result<HashMap<(&str, String, u
     );
     tasks.insert(
         ("gold", gold::request(), config.schedule.gold),
-        Local::now().timestamp(),
+        Local::now().timestamp() + 1,
     );
     tasks.insert(
         (
             "vacuum",
-            vacuum::request(config.vacuum.clone()),
+            vacuum::request(&config.vacuum),
             config.schedule.vacuum,
         ),
         Local::now().timestamp(),
     );
-    tasks.insert(
-        (
-            "dimension",
-            dimension::request()?,
-            config.schedule.dimension,
-        ),
-        0,
-    );
+    tasks.insert(("file", file::request()?, config.schedule.file), 0);
+    if config.schedule.export > 0 {
+        tasks.insert(
+            (
+                "export",
+                export::request(&config.export),
+                config.schedule.export,
+            ),
+            0,
+        );
+    }
     Ok(tasks)
+}
+
+pub fn execute_final_schedule_request(config: &Config) -> Result<(), Error> {
+    execute_request(&silver::request(), config.in_memory)?;
+    info!("final silver request executed");
+    execute_request(&gold::request(), config.in_memory)?;
+    info!("final gold request executed");
+    if config.schedule.export > 0 {
+        execute_request(&export::request(&config.export), config.in_memory)?;
+        info!("final export request executed");
+    };
+    Ok(())
 }
 
 pub async fn execute_schedule_request_task(
@@ -119,7 +134,6 @@ pub async fn execute_schedule_request_task(
                 );
             }
         }
-
         sleep(Duration::from_millis(10)).await;
     }
 
@@ -156,19 +170,17 @@ pub async fn process_task(
 
         let duration = Local::now().timestamp_millis() - start;
 
-        if duration > (frequency * 1000) as i64 {
+        if duration > frequency as i64 {
             warn!(
-                "sending rows is longer than the frequency. {} bronze processes sent in {} s",
-                length,
-                duration as f32 / 1000.0
+                "sending rows is longer than the frequency. {} bronze processes sent in {} ms",
+                length, duration
             );
         } else {
             info!(
-                "sent bronze sql request with {} processes in {} s",
-                length,
-                duration as f32 / 1000.0
+                "sent bronze sql request with {} processes in {} ms",
+                length, duration
             );
-            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
+            sleep(Duration::from_millis(frequency - duration as u64)).await;
         }
     }
 
@@ -179,6 +191,7 @@ pub async fn process_task(
 
 pub async fn open_file_task(
     config: &ChannelConfig,
+    file_type: FileType,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
@@ -186,7 +199,7 @@ pub async fn open_file_task(
 
     while !stop_flag.load(Ordering::Relaxed) {
         let start = Local::now().timestamp_millis();
-        let open_files = lsof()?;
+        let open_files = lsof(&file_type)?;
         let length = open_files.len();
 
         let batches: Vec<Vec<OpenFile>> = open_files
@@ -206,19 +219,17 @@ pub async fn open_file_task(
 
         let duration = Local::now().timestamp_millis() - start;
 
-        if duration > (frequency * 1000) as i64 {
+        if duration > frequency as i64 {
             warn!(
-                "sending rows is longer than the frequency. {} bronze open files sent in {} s",
-                length,
-                duration as f32 / 1000.0
+                "sending rows is longer than the frequency. {} bronze {} open files sent in {} ms",
+                length, &file_type, duration
             );
         } else {
             info!(
-                "sent bronze sql request with {} open files in {} s",
-                length,
-                duration as f32 / 1000.0
+                "sent bronze sql request with {} {} open files in {} ms",
+                length, &file_type, duration
             );
-            sleep(Duration::from_millis(frequency * 1000 - duration as u64)).await;
+            sleep(Duration::from_millis(frequency - duration as u64)).await;
         }
     }
 
@@ -269,11 +280,7 @@ pub async fn network_capture_sink_task(
                     stop_flag.store(true, Ordering::Release);
                 } else {
                     let duration = Local::now().timestamp_millis() - start;
-                    info!(
-                        "sent {} network capture sql in {} s",
-                        length,
-                        duration as f32 / 1000.0
-                    );
+                    info!("sent {} network capture sql in {} ms", length, duration);
                 }
             }
             Err(_) => {
@@ -281,7 +288,7 @@ pub async fn network_capture_sink_task(
             }
         }
 
-        sleep(Duration::from_secs(config.producer_frequency.unwrap())).await;
+        sleep(Duration::from_millis(config.producer_frequency.unwrap())).await;
     }
 
     Ok(())

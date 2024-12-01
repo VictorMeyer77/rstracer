@@ -41,21 +41,22 @@ whereas file mode stores data for post-run analysis at a slight performance cost
 
 ```shell
 sudo apt-get update
-sudo apt-get install libpcap-dev
+sudo apt-get install -y \
+    libpcap-dev \
+    git \
+    build-essential \
+    lsof \
+    dnsutils
 ```
-
-No additional libraries are required on macOS.
 
 ## Installation
 
 **rstracer** is not yet available on [crates.io](https://crates.io/).
 
-To install directly from GitHub:
+To install directly from GitHub in your _.cargo/bin_ directory:
 
 ```shell
-git clone https://github.com/VictorMeyer77/rstracer.git
-cd rstracer
-cargo build --release
+cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.0
 ```
 
 ## Usage
@@ -64,7 +65,7 @@ Due to network analysis capabilities, the binary must be run
 with administrative permissions:
 
 ```shell
-sudo target/release/rstracer
+sudo rstracer
 ```
 
 ## Configuration
@@ -72,12 +73,10 @@ sudo target/release/rstracer
 A default configuration is automatically applied if a `rstracer.toml` file
 is not found in the working directory.
 
-Refer to the [rstracer.toml](rstracer/rstracer.toml) file for customizable options.
+Refer to the [rstracer.toml](rstracer.toml) file for customizable options.
 
 ## Limitations
 
 1. **System Language**: The `ps` command date parsing requires the system
 language to be set to English.
-2. **In-Memory Database Querying**: In-memory mode currently does not
-support external database queries.
-3. **Platform**: Only available for UNIX-based systems.
+2. **Platform**: Only available for UNIX-based systems.

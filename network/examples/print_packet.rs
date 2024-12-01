@@ -17,10 +17,6 @@ async fn main() {
         .with_max_level(Level::INFO)
         .init();
 
-    let device = pcap::Device::lookup().unwrap().unwrap();
-
-    println!("Use device {:?}", device);
-
     let (sender, mut receiver): (Sender<Capture>, Receiver<Capture>) = channel(256);
     let stop_flag = Arc::new(AtomicBool::new(false));
     let stop_flag_clone = Arc::clone(&stop_flag);

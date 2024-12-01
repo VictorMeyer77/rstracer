@@ -8,10 +8,13 @@ description = "API for reading etc/ files (UNIX)"
 [dependencies]
 regex = "1.11.0"
 tempfile = "3.13.0"
-thiserror = "1.0.63"
+thiserror = "2.0.0"
 
 [[example]]
 name = "read_hosts"
 
 [[example]]
 name = "read_services"
+
+[[example]]
+name = "read_users"

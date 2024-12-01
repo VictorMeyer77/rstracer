@@ -1,7 +1,7 @@
-use lsof::lsof::{lsof, OpenFile};
+use lsof::lsof::{lsof, FileType, OpenFile};
 
 fn main() {
-    display(lsof().unwrap());
+    display(lsof(&FileType::ALL).unwrap());
 }
 
 fn display(files: Vec<OpenFile>) {
