@@ -3,7 +3,7 @@ resolver = "2"
 
 members = [
     "etc",
-     # "logs", not used
+    "logs",
     "lsof",
     "network",
     "ps",
