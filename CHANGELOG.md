@@ -17,6 +17,9 @@ Log types:
 
 ### Changed
 
+Rehab logs crate with journalctl
+Simplify 'ps' by focusing linux
+
 ### Fixed
 
 ### Removed
