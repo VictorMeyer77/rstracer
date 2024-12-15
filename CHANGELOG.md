@@ -15,6 +15,8 @@ Log types:
 
 ### Added
 
+Netstat crate
+
 ### Changed
 
 Rehab logs crate with journalctl

@@ -5,6 +5,7 @@ members = [
     "etc",
     "logs",
     "lsof",
+    "netstat",
     "network",
     "ps",
     "rstracer"
