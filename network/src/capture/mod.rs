@@ -25,11 +25,11 @@ pub enum Layer {
 pub struct Capture {
     pub device: Device,
     pub packet: Vec<u8>,
-    pub created_at: i64,
     pub data_link: Option<DataLink>,
     pub network: Option<Network>,
     pub transport: Option<Transport>,
     pub application: Option<Application>,
+    pub _created_at: i64,
 }
 
 impl fmt::Display for Layer {
@@ -52,11 +52,11 @@ impl Capture {
         Capture {
             device: device.clone(),
             packet: packet.to_vec(),
-            created_at: Local::now().timestamp_millis(),
             data_link: None,
             network: None,
             transport: None,
             application: None,
+            _created_at: Local::now().timestamp_millis(),
         }
     }
 

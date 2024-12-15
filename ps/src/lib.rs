@@ -10,15 +10,15 @@ pub mod error;
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
 pub struct Process {
-    pub pid: u32,        // Process ID
-    pub ppid: u32,       // Parent Process ID
-    pub uid: i16,        // User ID of the process owner
-    pub lstart: i64,     // Exact date and time when the process started
-    pub pcpu: f32,       // CPU usage percentage
-    pub pmem: f32,       // Memory usage percentage
-    pub status: String,  // Process status
-    pub command: String, // Command with all its arguments
-    pub created_at: i64, // Timestamp command execution
+    pub pid: u32,         // Process ID
+    pub ppid: u32,        // Parent Process ID
+    pub uid: i16,         // User ID of the process owner
+    pub lstart: i64,      // Exact date and time when the process started
+    pub pcpu: f32,        // CPU usage percentage
+    pub pmem: f32,        // Memory usage percentage
+    pub status: String,   // Process status
+    pub command: String,  // Command with all its arguments
+    pub _created_at: i64, // Timestamp command execution
 }
 
 impl Process {
@@ -33,7 +33,7 @@ impl Process {
             pmem: chunks[9].parse()?,
             status: chunks[10].to_string(),
             command: chunks[11..].join(" "),
-            created_at: Local::now().timestamp_millis(),
+            _created_at: Local::now().timestamp_millis(),
         })
     }
 
@@ -105,7 +105,7 @@ mod tests {
             pmem: 1.2,
             status: "S".to_string(),
             command: "/bin/bash".to_string(),
-            created_at: 0,
+            _created_at: 0,
         };
 
         let process = Process::from(row).unwrap();

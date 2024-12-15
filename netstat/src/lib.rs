@@ -29,7 +29,7 @@ pub struct Socket {
     pub inode: u64,
     pub pid: Option<i32>,
     pub command: Option<String>,
-    pub read_at: i64,
+    pub _created_at: i64,
 }
 
 impl From<(TcpNetEntry, Option<i32>, Option<String>)> for Socket {
@@ -45,7 +45,7 @@ impl From<(TcpNetEntry, Option<i32>, Option<String>)> for Socket {
             inode: value.0.inode,
             pid: value.1,
             command: value.2,
-            read_at: Local::now().timestamp_millis(),
+            _created_at: Local::now().timestamp_millis(),
         }
     }
 }
@@ -63,7 +63,7 @@ impl From<(UdpNetEntry, Option<i32>, Option<String>)> for Socket {
             inode: value.0.inode,
             pid: value.1,
             command: value.2,
-            read_at: Local::now().timestamp_millis(),
+            _created_at: Local::now().timestamp_millis(),
         }
     }
 }
