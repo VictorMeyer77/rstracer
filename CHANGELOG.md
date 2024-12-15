@@ -21,6 +21,7 @@ Log types:
 
 - Rehab `logs` crate with journalctl
 - Simplify `ps` by focusing linux
+- Simplify `etc` by focusing linux
 - Simplify `lsof` by removing network
 
 ### Fixed

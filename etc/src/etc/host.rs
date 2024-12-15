@@ -1,7 +1,6 @@
 use crate::etc::error::Error;
 use crate::etc::EtcReader;
 use std::fs;
-use std::process::Command;
 
 const FILE_PATH: &str = "/etc/hosts";
 
@@ -13,7 +12,7 @@ pub struct Host {
 
 impl EtcReader<Host> for Host {
     fn read_etc_file(path: Option<&str>) -> Result<Vec<Host>, Error> {
-        let mut host_buffer: Vec<Host> = vec![get_hostname_row()?];
+        let mut host_buffer: Vec<Host> = vec![];
         let path = if let Some(path) = path {
             path
         } else {
@@ -45,24 +44,6 @@ fn parse_host_row(row: &str) -> Vec<Host> {
         }
     }
     host_buffer
-}
-
-fn get_hostname_row() -> Result<Host, Error> {
-    let hostname = String::from_utf8_lossy(&Command::new("hostname").output()?.stdout)
-        .trim()
-        .to_string();
-    let address = String::from_utf8_lossy(
-        &Command::new("dig")
-            .args(["+short", &hostname])
-            .output()?
-            .stdout,
-    )
-    .trim()
-    .to_string();
-    Ok(Host {
-        name: hostname,
-        address,
-    })
 }
 
 #[cfg(test)]
@@ -176,13 +157,5 @@ mod tests {
                 address: "127.0.0.1".to_string(),
             }
         );
-    }
-
-    #[test]
-    fn test_get_hostname_row() {
-        let result = get_hostname_row();
-        assert!(result.is_ok());
-        let host = result.unwrap();
-        assert!(!host.name.is_empty());
     }
 }
