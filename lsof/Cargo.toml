@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 chrono = "0.4.38"
 thiserror = "2.0.0"
+tokio = { version = "1.42.0", features = ["full"] }
 
 [[example]]
-name = "list_open_file"
+name = "show_open_files"

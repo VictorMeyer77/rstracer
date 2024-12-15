@@ -15,12 +15,13 @@ Log types:
 
 ### Added
 
-Netstat crate
+- `netstat` crate
 
 ### Changed
 
-Rehab logs crate with journalctl
-Simplify 'ps' by focusing linux
+- Rehab `logs` crate with journalctl
+- Simplify `ps` by focusing linux
+- Simplify `lsof` by removing network
 
 ### Fixed
 
