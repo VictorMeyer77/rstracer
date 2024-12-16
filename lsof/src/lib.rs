@@ -1,11 +1,6 @@
 use crate::error::Error;
 use chrono::Local;
 use std::process::{Command, Output};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::mpsc::Sender;
-use tokio::time::sleep;
 
 pub mod error;
 
@@ -94,27 +89,16 @@ fn row_to_struct(header: &(u32, i16, String), row: &str) -> OpenFile {
     buffer_open_file
 }
 
-fn lsof_cmd() -> Result<Output, Error> {
+fn os_command() -> Result<Output, Error> {
     Ok(Command::new("lsof")
         .args(["-F", "pcuftDsin", "/"])
         .output()?)
 }
 
-pub async fn producer(
-    sender: Sender<OpenFile>,
-    stop_flag: &Arc<AtomicBool>,
-    frequency: u64,
-) -> Result<(), Error> {
-    while !stop_flag.load(Ordering::Relaxed) {
-        let open_files = parse_cmd_output(&String::from_utf8_lossy(&lsof_cmd()?.stdout))?;
-        for open_file in open_files {
-            if let Err(e) = sender.send(open_file).await {
-                return Err(Error::Channel(Box::new(e)));
-            }
-        }
-        sleep(Duration::from_millis(frequency)).await;
-    }
-    Ok(())
+pub fn lsof() -> Result<Vec<OpenFile>, Error> {
+    let output = os_command()?;
+    let content = String::from_utf8_lossy(&output.stdout);
+    parse_cmd_output(&content)
 }
 
 #[cfg(test)]
