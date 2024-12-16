@@ -3,12 +3,9 @@ use chrono::Local;
 use procfs::net::{TcpNetEntry, UdpNetEntry};
 use procfs::process::{FDTarget, Stat};
 use std::collections::HashMap;
+use std::fmt;
 use std::net::SocketAddr;
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::mpsc::Sender;
-use tokio::time::sleep;
+
 pub mod error;
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
@@ -30,6 +27,19 @@ pub struct Socket {
     pub pid: Option<i32>,
     pub command: Option<String>,
     pub _created_at: i64,
+}
+
+impl fmt::Display for SocketType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                SocketType::Tcp => "tcp",
+                SocketType::Udp => "udp",
+            }
+        )
+    }
 }
 
 impl From<(TcpNetEntry, Option<i32>, Option<String>)> for Socket {
@@ -117,28 +127,10 @@ fn read_udp_socket(inode_with_process: &HashMap<u64, Stat>) -> Result<Vec<Socket
     Ok(socket_buffer)
 }
 
-fn read_socket() -> Result<Vec<Socket>, Error> {
+pub fn sockets() -> Result<Vec<Socket>, Error> {
     let mut socket_buffer: Vec<Socket> = vec![];
     let inode_with_process = inode_with_process()?;
     socket_buffer.extend_from_slice(&read_tcp_socket(&inode_with_process)?);
     socket_buffer.extend_from_slice(&read_udp_socket(&inode_with_process)?);
     Ok(socket_buffer)
-}
-
-pub async fn producer(
-    sender: Sender<Socket>,
-    stop_flag: &Arc<AtomicBool>,
-    frequency: u64,
-) -> Result<(), Error> {
-    while !stop_flag.load(Ordering::Relaxed) {
-        let sockets = read_socket()?;
-        for socket in sockets {
-            if let Err(e) = sender.send(socket).await {
-                return Err(Error::Channel(Box::new(e)));
-            }
-        }
-        sleep(Duration::from_millis(frequency)).await
-    }
-
-    Ok(())
 }

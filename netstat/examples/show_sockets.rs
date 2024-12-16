@@ -1,26 +1,26 @@
-use netstat::{producer, Socket};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use tokio::sync::mpsc::{channel, Receiver, Sender};
-use tokio::{join, signal};
+use netstat::{sockets, Socket};
 
-#[tokio::main]
-async fn main() {
-    let (sender, mut receiver): (Sender<Socket>, Receiver<Socket>) = channel(256);
-    let stop_flag = Arc::new(AtomicBool::new(false));
-    let stop_flag_clone = stop_flag.clone();
-    let producer_task = tokio::spawn(async move { producer(sender, &stop_flag_clone, 100).await });
+fn main() {
+    display(sockets().unwrap());
+}
 
-    let stop_task = tokio::spawn(async move {
-        signal::ctrl_c().await.expect("Failed to listen for Ctrl+C");
-        stop_flag.store(true, Ordering::Release);
+fn display(sockets: Vec<Socket>) {
+    println!(
+        "{0: <6} | {1: <5} | {2: <20} | {3: <20} | {4: <20} | {5: <8} | {6: <8} | {7: <8} | {8: <5}",
+        "pid", "uid", "command", "local_address", "remote_address", "state", "rx_queue", "tx_queue", "inode"
+    );
+    sockets.iter().for_each(|socket| {
+        println!(
+            "{0: <6} | {1: <5} | {2: <20} | {3: <20} | {4: <20} | {5: <8} | {6: <8} | {7: <8} | {8: <5}",
+            socket.pid.unwrap_or(-1),
+            socket.uid,
+            socket.command.clone().unwrap_or_else(|| "-".to_string()),
+            socket.local_address,
+            socket.remote_address,
+            socket.state,
+            socket.rx_queue,
+            socket.tx_queue,
+            socket.inode
+        );
     });
-
-    while let Some(socket) = receiver.recv().await {
-        println!("{:?}", socket);
-    }
-
-    let (producer_task_result, stop_task_result) = join!(producer_task, stop_task);
-    producer_task_result.unwrap().unwrap();
-    stop_task_result.unwrap();
 }

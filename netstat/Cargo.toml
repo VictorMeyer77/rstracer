@@ -15,7 +15,6 @@ categories.workspace = true
 chrono = "0.4.39"
 procfs = "0.17.0"
 thiserror = "2.0.7"
-tokio = { version = "1.42.0", features = ["full"] }
 
 [[example]]
 name = "show_sockets"
