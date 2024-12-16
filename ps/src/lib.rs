@@ -1,11 +1,6 @@
 use crate::error::Error;
 use chrono::{Local, NaiveDateTime};
-use std::io::{BufRead, BufReader};
-use std::process::{ChildStdout, Command, Stdio};
-use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::Arc;
-use tokio::sync::mpsc::Sender;
-
+use std::process::{Command, Output};
 pub mod error;
 
 #[derive(Debug, Clone, PartialOrd, PartialEq)]
@@ -48,37 +43,22 @@ impl Process {
     }
 }
 
-fn read_process_cmd(frequency: f32) -> Result<BufReader<ChildStdout>, Error> {
-    let stdout =  Command::new("sh")
-        .arg("-c")
-        .arg(format!("while true; do ps -eo pid,ppid,uid,lstart,pcpu,pmem,stat,args --no-headers && sleep {frequency}; done"))
-        .stdout(Stdio::piped())
-        .spawn()?
-        .stdout
-        .ok_or_else(||  Error::Stdout {
-            msg: "Could not capture standard output.".to_string(),
-        })?;
-    Ok(BufReader::new(stdout))
+fn os_command() -> Result<Output, Error> {
+    Ok(Command::new("ps")
+        .args([
+            "-eo",
+            "pid,ppid,uid,lstart,pcpu,pmem,stat,args",
+            "--no-headers",
+        ])
+        .output()?)
 }
 
-pub async fn producer(
-    sender: Sender<Process>,
-    stop_flag: &Arc<AtomicBool>,
-    frequency: f32,
-) -> Result<(), Error> {
-    let reader = read_process_cmd(frequency)?;
-    let mut raw_processes = reader.lines().map_while(Result::ok);
-
-    while !stop_flag.load(Ordering::Relaxed) {
-        if let Some(raw_process) = raw_processes.next() {
-            let process = Process::from(&raw_process)?;
-            if let Err(e) = sender.send(process).await {
-                return Err(Error::Channel(Box::new(e)));
-            }
-        }
-    }
-
-    Ok(())
+pub fn ps() -> Result<Vec<Process>, Error> {
+    let output = os_command()?;
+    let content = String::from_utf8_lossy(&output.stdout);
+    let lines = content.lines();
+    let processes: Result<Vec<Process>, _> = lines.map(Process::from).collect();
+    processes
 }
 
 #[cfg(test)]
