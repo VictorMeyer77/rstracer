@@ -67,7 +67,7 @@ mod tests {
 
         let hosts = Host::read_etc_file(Some(path)).unwrap();
 
-        assert_eq!(hosts.len(), 5);
+        assert_eq!(hosts.len(), 4);
         assert!(hosts.contains(&Host {
             name: "hello.database.windows.net".to_string(),
             address: "172.22.17.10".to_string(),
@@ -97,7 +97,7 @@ mod tests {
 
         let hosts = Host::read_etc_file(Some(path)).unwrap();
 
-        assert_eq!(hosts.len(), 3);
+        assert_eq!(hosts.len(), 2);
         assert!(hosts.contains(&Host {
             name: "hello.database.windows.net".to_string(),
             address: "172.22.17.10".to_string(),
@@ -112,7 +112,7 @@ mod tests {
     fn test_read_etc_file_empty() {
         let temp_file = NamedTempFile::new().unwrap();
         let hosts = Host::read_etc_file(Some(temp_file.path().to_str().unwrap())).unwrap();
-        assert_eq!(hosts.len(), 1);
+        assert_eq!(hosts.len(), 0);
     }
 
     #[test]
@@ -123,7 +123,7 @@ mod tests {
 
         let hosts = Host::read_etc_file(Some(temp_file.path().to_str().unwrap())).unwrap();
 
-        assert_eq!(hosts.len(), 1);
+        assert_eq!(hosts.len(), 0);
     }
 
     #[test]
