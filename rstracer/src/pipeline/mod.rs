@@ -4,9 +4,9 @@ use crate::pipeline::error::Error;
 use crate::pipeline::stage::bronze::{concat_requests, create_insert_batch_request, Bronze};
 use crate::pipeline::stage::{export, file, gold, silver, vacuum};
 use chrono::Local;
-use lsof::lsof::{lsof, FileType, OpenFile};
+use lsof::{lsof, OpenFile};
 use network::capture::Capture;
-use ps::ps::{ps, Process};
+use ps::{ps, Process};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::Arc;
@@ -191,7 +191,6 @@ pub async fn process_task(
 
 pub async fn open_file_task(
     config: &ChannelConfig,
-    file_type: FileType,
     sender_request: Sender<String>,
     stop_flag: Arc<AtomicBool>,
 ) -> Result<(), Error> {
@@ -199,7 +198,7 @@ pub async fn open_file_task(
 
     while !stop_flag.load(Ordering::Relaxed) {
         let start = Local::now().timestamp_millis();
-        let open_files = lsof(&file_type)?;
+        let open_files = lsof()?;
         let length = open_files.len();
 
         let batches: Vec<Vec<OpenFile>> = open_files
@@ -221,13 +220,13 @@ pub async fn open_file_task(
 
         if duration > frequency as i64 {
             warn!(
-                "sending rows is longer than the frequency. {} bronze {} open files sent in {} ms",
-                length, &file_type, duration
+                "sending rows is longer than the frequency. {} bronze open files sent in {} ms",
+                length, duration
             );
         } else {
             info!(
-                "sent bronze sql request with {} {} open files in {} ms",
-                length, &file_type, duration
+                "sent bronze sql request with {} open files in {} ms",
+                length, duration
             );
             sleep(Duration::from_millis(frequency - duration as u64)).await;
         }

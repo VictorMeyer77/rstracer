@@ -1,4 +1,4 @@
-use lsof::lsof::OpenFile;
+use lsof::OpenFile;
 use network::capture::application::http::Http;
 use network::capture::application::tls::Tls;
 use network::capture::application::{Application, ApplicationProtocol};
@@ -17,7 +17,7 @@ use pnet::packet::ipv6::Ipv6;
 use pnet::packet::tcp::Tcp;
 use pnet::packet::udp::Udp;
 use pnet::packet::PrimitiveValues;
-use ps::ps::Process;
+use ps::Process;
 use std::collections::HashMap;
 use std::net::IpAddr;
 use uuid::Uuid;
@@ -88,7 +88,7 @@ impl BronzeBatch for Process {
             self.pmem,
             self.status,
             self.command.replace('\'', "\""),
-            self.created_at
+            self._created_at
         )
     }
 }
@@ -111,7 +111,7 @@ impl BronzeBatch for OpenFile {
             self.size,
             self.node,
             self.name.replace('\'', "\""),
-            self.created_at
+            self._created_at
         )
     }
 }
@@ -132,7 +132,7 @@ impl Bronze for Capture {
             row_id,
             clone.device.name,
             clone.packet.len(),
-            clone.created_at
+            clone._created_at
         );
 
         request_buffer.push_str(&device_addresses_to_sql(&clone.device));
@@ -638,8 +638,8 @@ fn bronze_tls(tls: Tls, packet_id: u128) -> String {
 mod tests {
     use super::*;
     use crate::pipeline::stage::tests::create_test_connection;
-    use lsof::lsof::{lsof, FileType};
-    use ps::ps::ps;
+    use lsof::lsof;
+    use ps::ps;
 
     #[derive(Debug)]
     struct BronzeBatchTest {
@@ -849,7 +849,7 @@ mod tests {
     #[test]
     fn test_insert_open_files() {
         let connection = create_test_connection();
-        let processes = lsof(&FileType::ALL).unwrap();
+        let processes = lsof().unwrap();
         connection
             .execute_batch(&create_insert_batch_request(processes))
             .unwrap();
