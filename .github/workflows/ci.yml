@@ -27,7 +27,7 @@ jobs:
         run: >
           container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
 
-          docker exec $container_id sh command.sh test
+          docker exec $container_id sh .docker/command.sh test
   lint:
     name: Lint
     runs-on: ubuntu-latest
@@ -40,7 +40,7 @@ jobs:
         run: >
           container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
 
-          docker exec $container_id sh command.sh lint
+          docker exec $container_id sh .docker/command.sh lint
 #  test-coverage:
 #    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
 #    runs-on: ubuntu-latest
