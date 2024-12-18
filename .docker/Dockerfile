@@ -39,7 +39,7 @@ ADD ../rstracer /rstracer/rstracer
 ADD ../Cargo.toml /rstracer/Cargo.toml
 ADD ../.pre-commit-config.yaml /rstracer/.pre-commit-config.yaml
 ADD ../rstracer.toml /rstracer/rstracer.toml
-ADD ../docker/command.sh /rstracer/command.sh
+ADD ../.docker/command.sh /rstracer/command.sh
 
 # Launch
 
