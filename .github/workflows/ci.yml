@@ -41,6 +41,20 @@ jobs:
           container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
 
           docker exec $container_id sh .docker/command.sh lint
+  coverage:
+    name: Test Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+      - name: Build docker image
+        run: docker build -t rstracer-debian-image -f .docker/Dockerfile .
+      - name: Coverage
+        run: >
+          container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
+
+          docker exec $container_id sh .docker/command.sh coverage
+
 #  test-coverage:
 #    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
 #    runs-on: ubuntu-latest

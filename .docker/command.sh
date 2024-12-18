@@ -35,7 +35,7 @@ coverage() {
 }
 
 if [ $# -eq 0 ]; then
-  echo "Usage: $0 {run|test|coverage}"
+  echo "Usage: $0 {run|test|lint|coverage}"
   exit 1
 fi
 
