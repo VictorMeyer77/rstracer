@@ -26,6 +26,7 @@ jobs:
       - name: Test
         run: >
           container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
+          
           docker exec -it a5575d2ec7d86628cdcb827bf439a5bf49cc51c8f4b285e04175e6496e7f34b6 sh command.sh test
 #  test-coverage:
 #    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
