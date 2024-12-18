@@ -24,8 +24,10 @@ RUN pip install --no-cache-dir pre-commit
 RUN cargo install grcov
 RUN mkdir .coverage
 
-# Install rstracer
+# Install project files
 
+ADD ../.docker/ /rstracer/.docker
+ADD ../.github /rstracer/.github
 ADD ../etc /rstracer/etc
 ADD ../logs /rstracer/logs
 ADD ../lsof /rstracer/lsof
@@ -33,13 +35,17 @@ ADD ../netstat /rstracer/netstat
 ADD ../network /rstracer/network
 ADD ../ps /rstracer/ps
 ADD ../rstracer /rstracer/rstracer
-ADD ../Cargo.toml /rstracer/Cargo.toml
+ADD ../.gitignore /rstracer/.gitignore
 ADD ../.pre-commit-config.yaml /rstracer/.pre-commit-config.yaml
+ADD ../Cargo.toml /rstracer/Cargo.toml
+ADD ../CHANGELOG.md /rstracer/CHANGELOG.md
+ADD ../LICENSE /rstracer/LICENSE
+ADD ../README.md /rstracer/README.md
 ADD ../rstracer.toml /rstracer/rstracer.toml
-ADD ../.docker/command.sh /rstracer/command.sh
-
-# Launch
 
 WORKDIR /rstracer
 VOLUME ["/rstracer/.coverage"]
+
+# Launch
+
 ENTRYPOINT ["/sbin/init"]

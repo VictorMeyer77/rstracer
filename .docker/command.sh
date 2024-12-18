@@ -13,6 +13,8 @@ test() {
 
 lint() {
   echo "Running linter..."
+  git init
+  git add .
   pre-commit run --all-files
 }
 
