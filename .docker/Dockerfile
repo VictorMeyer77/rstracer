@@ -21,6 +21,8 @@ RUN apt-get install -y \
 # CICD dependencies
 
 RUN pip install --no-cache-dir pre-commit
+RUN rustup component add rustfmt
+RUN rustup component add clippy
 RUN cargo install grcov
 RUN mkdir .coverage
 
