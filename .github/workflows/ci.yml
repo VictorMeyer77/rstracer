@@ -42,7 +42,7 @@ jobs:
 
           docker exec $container_id sh .docker/command.sh lint
   coverage:
-    name: Test Coverage
+    name: Coverage
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -54,6 +54,10 @@ jobs:
           container_id=$(docker run --privileged -d --mount type=bind,source=$(pwd),target=/rstracer/.coverage rstracer-debian-image)
 
           docker exec $container_id sh .docker/command.sh coverage
+      - name: Upload coverage reports to Codecov
+        uses: codecov/codecov-action@v4.0.1
+        with:
+          token: '${{ secrets.CODECOV_TOKEN }}'
 
 #  test-coverage:
 #    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
