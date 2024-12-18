@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 run() {
   echo "Building the project and running the executable..."
@@ -11,8 +11,15 @@ test() {
   cargo test --lib
 }
 
+lint() {
+  echo "Running linter..."
+  pre-commit run --all-files
+}
+
 coverage() {
   echo "Generating code coverage report..."
+  rustup toolchain add nightly --component llvm-tools-preview
+  rustup override set nightly
   LLVM_PROFILE_FILE='.coverage/grcov-%p-%m.profraw' RUSTFLAGS='-Cinstrument-coverage' cargo test
   grcov $(find . -name "grcov-*.profraw" -print) \
     --branch \
@@ -25,13 +32,11 @@ coverage() {
   echo "Coverage report generated at .coverage/lcov.info"
 }
 
-# Check if arguments are provided
-if [[ $# -eq 0 ]]; then
+if [ $# -eq 0 ]; then
   echo "Usage: $0 {run|test|coverage}"
   exit 1
 fi
 
-# Call the appropriate function based on the argument
 case "$1" in
   run)
     run
@@ -39,12 +44,15 @@ case "$1" in
   test)
     test
     ;;
+  lint)
+    lint
+    ;;
   coverage)
     coverage
     ;;
   *)
     echo "Invalid argument: $1"
-    echo "Usage: $0 {run|test|coverage}"
+    echo "Usage: $0 {run|test|lint|coverage}"
     exit 1
     ;;
 esac

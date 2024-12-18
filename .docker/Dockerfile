@@ -22,9 +22,6 @@ RUN apt-get install -y \
 
 RUN pip install --no-cache-dir pre-commit
 RUN cargo install grcov
-RUN rustup toolchain add nightly --component llvm-tools-preview
-RUN rustup override set nightly
-
 RUN mkdir .coverage
 
 # Install rstracer
