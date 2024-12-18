@@ -45,7 +45,7 @@ mod tests {
     use std::io::Write;
 
     #[test]
-    fn test_read_etc_file_valid_content() {
+    fn test_read_etc_file_from_path() {
         let mut temp_file = tempfile::NamedTempFile::new().unwrap();
         writeln!(
             temp_file,
@@ -71,6 +71,11 @@ mod tests {
             },
         ];
         assert_eq!(services, expected);
+    }
+
+    #[test]
+    fn test_read_etc_file_default() {
+        assert!(!Service::read_etc_file(None).unwrap().is_empty());
     }
 
     #[test]

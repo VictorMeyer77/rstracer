@@ -53,7 +53,7 @@ mod tests {
     use tempfile::NamedTempFile;
 
     #[test]
-    fn test_read_etc_file() {
+    fn test_read_etc_file_from_path() {
         let mut temp_file = NamedTempFile::new().unwrap();
         writeln!(temp_file, "127.0.0.1\tlocalhost").unwrap();
         writeln!(temp_file, "255.255.255.255\tbroadcasthost").unwrap();
@@ -84,6 +84,11 @@ mod tests {
             name: "broadcasthost".to_string(),
             address: "255.255.255.255".to_string(),
         }));
+    }
+
+    #[test]
+    fn test_read_etc_file_default() {
+        assert!(!Host::read_etc_file(None).unwrap().is_empty());
     }
 
     #[test]

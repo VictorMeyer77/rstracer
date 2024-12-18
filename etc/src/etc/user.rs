@@ -40,9 +40,37 @@ fn parse_cut_output(output: &str) -> Result<Vec<User>, Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
-    fn test_read_etc_file_success() {
+    fn test_read_etc_file_from_path() {
+        let mut temp_file = NamedTempFile::new().unwrap();
+        writeln!(temp_file, "root:x:0:0:root:/root:/bin/bash").unwrap();
+        writeln!(temp_file, "daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin").unwrap();
+        writeln!(temp_file, "# Comment line").unwrap();
+        writeln!(temp_file, "bin:x:2:2:bin:/bin:/usr/sbin/nologin").unwrap();
+        let path = temp_file.path().to_str().unwrap();
+
+        let users = User::read_etc_file(Some(path)).unwrap();
+
+        assert_eq!(users.len(), 3);
+        assert!(users.contains(&User {
+            name: "root".to_string(),
+            uid: 0,
+        }));
+        assert!(users.contains(&User {
+            name: "daemon".to_string(),
+            uid: 1,
+        }));
+        assert!(users.contains(&User {
+            name: "bin".to_string(),
+            uid: 2,
+        }));
+    }
+
+    #[test]
+    fn test_read_etc_file_default() {
         assert!(!User::read_etc_file(None).unwrap().is_empty());
     }
 
