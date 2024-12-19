@@ -30,6 +30,7 @@ coverage() {
     -s . \
     -t lcov \
     --ignore "/*" \
+    --ignore "examples/" \
     -o .coverage/lcov.info
   echo "Coverage report generated at .coverage/lcov.info"
 }
