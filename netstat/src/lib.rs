@@ -134,3 +134,28 @@ pub fn sockets() -> Result<Vec<Socket>, Error> {
     socket_buffer.extend_from_slice(&read_udp_socket(&inode_with_process)?);
     Ok(socket_buffer)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_sockets() {
+        let sockets = sockets().unwrap();
+        assert!(sockets.len() > 0);
+        assert!(
+            sockets
+                .iter()
+                .filter(|&socket| socket.socket_type == SocketType::Tcp)
+                .count()
+                > 0
+        );
+        assert!(
+            sockets
+                .iter()
+                .filter(|&socket| socket.socket_type == SocketType::Udp)
+                .count()
+                > 0
+        );
+    }
+}
