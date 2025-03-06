@@ -23,6 +23,22 @@ Log types:
 
 ### Security
 
+## [0.1.1](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.1) - 2025/03/06
+
+### Added
+
+### Changed
+
+- update duckdb and config crates
+
+### Fixed
+
+- pin chrono to 0.4.39
+
+### Removed
+
+### Security
+
 ## [0.1.0](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0) - 2024/11/29
 
 ### Added

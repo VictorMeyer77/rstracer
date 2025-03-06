@@ -56,7 +56,7 @@ sudo apt-get install -y \
 To install directly from GitHub in your _.cargo/bin_ directory:
 
 ```shell
-cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.0
+cargo install --git https://github.com/VictorMeyer77/rstracer.git --tag 0.1.1
 ```
 
 ## Usage
