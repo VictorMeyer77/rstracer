@@ -127,9 +127,8 @@ jobs:
           # Install toolchains
 
           sudo apt-get update
-          sudo apt-get install libffi7
 
-          sudo apt-get install -y clang-${{ matrix.clang }} g++-${{ matrix.gcc
+          sudo apt-get install -y libffi7 clang-${{ matrix.clang }} g++-${{ matrix.gcc
           }}
       - name: Install project prerequisites
         run: |
