@@ -31,18 +31,18 @@ jobs:
           llvm-tools-preview
 
           rustup override set ${{ matrix.toolchain }}
-      #- name: Configure cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: |
-      #      ~/.cargo/bin/
-      #      ~/.cargo/registry/index/
-      #      ~/.cargo/registry/cache/
-      #      ~/.cargo/git/db/
-      #      target/
-      #    key: >-
-      #      test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
-      #      hashFiles('**/Cargo.lock') }}
+      - name: Configure cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: >-
+            test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
+            hashFiles('**/Cargo.lock') }}
       - name: Test
         run: cargo test --lib
   test-lib-macos:
@@ -69,38 +69,23 @@ jobs:
           llvm-tools-preview
 
           rustup override set ${{ matrix.toolchain }}
-      #- name: Configure cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: |
-      #      ~/.cargo/bin/
-      #      ~/.cargo/registry/index/
-      #      ~/.cargo/registry/cache/
-      #      ~/.cargo/git/db/
-      #      target/
-      #    key: >-
-      #      test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
-      #      hashFiles('**/Cargo.lock') }}
+      - name: Configure cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: >-
+            test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
+            hashFiles('**/Cargo.lock') }}
       - name: Test
         run: cargo test --lib
   test-coverage:
     name: 'Test coverage'
     runs-on: ubuntu-latest
-    #strategy:
-    #  matrix:
-    #    include:
-    #      - gcc: 10
-    #        clang: 11
-    #      - gcc: 11
-    #        clang: 12
-    #      - gcc: 11
-    #        clang: 13
-    #env:
-    #  CXX: 'clang++-${{ matrix.clang }}'
-    #  CLANG_CXX: 'clang++-${{ matrix.clang }}'
-    #  GCC_CXX: 'g++-${{ matrix.gcc }}'
-    #  GCOV: 'gcov-${{ matrix.gcc }}'
-    #continue-on-error: true
     steps:
 #      - name: Prepare C toolchains
 #        run: >
@@ -142,18 +127,18 @@ jobs:
         run: |
           rustup toolchain add nightly --component llvm-tools-preview
           rustup override set nightly
-      #- name: Configure cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: |
-      #      ~/.cargo/bin/
-      #      ~/.cargo/registry/index/
-      #      ~/.cargo/registry/cache/
-      #      ~/.cargo/git/db/
-      #      target/
-      #    key: >-
-      #      test-${{ runner.os }}-cargo-gcc-${{ matrix.gcc }}-clang-${{
-      #      matrix.clang }}-${{ hashFiles('**/Cargo.lock') }}
+      - name: Configure cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: >-
+            test-${{ runner.os }}-cargo-gcc-${{ matrix.gcc }}-clang-${{
+            matrix.clang }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         env:
           RUSTFLAGS: '-Cinstrument-coverage'
@@ -195,22 +180,22 @@ jobs:
           sudo apt-get install libpcap-dev
       - name: Install pre-commit
         run: pip install --no-cache-dir pre-commit
-      #- name: Configure Rust cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: |
-      #      ~/.cargo/bin/
-      #      ~/.cargo/registry/index/
-      #      ~/.cargo/registry/cache/
-      #      ~/.cargo/git/db/
-      #      target/
-      #    key: 'pre-commit-${{ runner.os }}-cargo-${{ hashFiles(''**/Cargo.lock'') }}'
-      #- name: Configure pre-commit cache
-      #  uses: actions/cache@v3
-      #  with:
-      #    path: ~/.cache/pre-commit
-      #    key: >-
-      #      pre-commit-${{ runner.os }}-pre-commit-${{
-      #      hashFiles('**/.pre-commit-config.yaml') }}
+      - name: Configure Rust cache
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: 'pre-commit-${{ runner.os }}-cargo-${{ hashFiles(''**/Cargo.lock'') }}'
+      - name: Configure pre-commit cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pre-commit
+          key: >-
+            pre-commit-${{ runner.os }}-pre-commit-${{
+            hashFiles('**/.pre-commit-config.yaml') }}
       - name: Run pre-commit
         run: pre-commit run --all-files

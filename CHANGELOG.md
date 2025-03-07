@@ -34,8 +34,11 @@ Log types:
 ### Fixed
 
 - pin chrono to 0.4.39
+- pin duckdb to 1.1.1
 
 ### Removed
+
+- ci matrix for test coverage
 
 ### Security
 
