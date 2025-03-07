@@ -83,44 +83,6 @@ jobs:
             hashFiles('**/Cargo.lock') }}
       - name: Test
         run: cargo test --lib
-#  test-lib-windows:
-#   name: Test library On Windows
-#   runs-on: '${{ matrix.os }}'
-#   strategy:
-#     matrix:
-#       os:
-#         - windows-latest
-#       arch:
-#         - x86
-#         - x86_64
-#         - arm
-#         - aarch64
-#       toolchain:
-#         - stable
-#   continue-on-error: true
-#   steps:
-#     - name: Checkout repository
-#       uses: actions/checkout@v3
-#     - name: Setup Rust
-#       run: >
-#         rustup toolchain add ${{ matrix.toolchain }} --component
-#         llvm-tools-preview
-
-#         rustup override set ${{ matrix.toolchain }}
-#     - name: Configure cache
-#       uses: actions/cache@v3
-#       with:
-#         path: |
-#           ~/.cargo/bin/
-#           ~/.cargo/registry/index/
-#           ~/.cargo/registry/cache/
-#           ~/.cargo/git/db/
-#           target/
-#         key: >-
-#           test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
-#           hashFiles('**/Cargo.lock') }}
-#     - name: Test
-#       run: cargo test --lib
   test-coverage:
     name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
     runs-on: ubuntu-latest
@@ -165,6 +127,7 @@ jobs:
           # Install toolchains
 
           sudo apt-get update
+          sudo apt-get install libffi7
 
           sudo apt-get install -y clang-${{ matrix.clang }} g++-${{ matrix.gcc
           }}
