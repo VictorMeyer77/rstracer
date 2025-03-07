@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 chrono = "=0.4.39"
 config = "0.15.9"
-duckdb = { version = "1.2.0", features = ["bundled"] }
+duckdb = { version = "1.1.1", features = ["bundled"] }
 etc = { path = "../etc"}
 lazy_static = "1.5.0"
 lsof = { path = "../lsof"}

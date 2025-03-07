@@ -29,7 +29,7 @@ Log types:
 
 ### Changed
 
-- update duckdb and config crates
+- update config crate version 
 
 ### Fixed
 
