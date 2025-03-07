@@ -84,23 +84,23 @@ jobs:
       - name: Test
         run: cargo test --lib
   test-coverage:
-    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
+    name: 'Test coverage'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - gcc: 10
-            clang: 11
-          - gcc: 11
-            clang: 12
-          - gcc: 11
-            clang: 13
-    env:
-      CXX: 'clang++-${{ matrix.clang }}'
-      CLANG_CXX: 'clang++-${{ matrix.clang }}'
-      GCC_CXX: 'g++-${{ matrix.gcc }}'
-      GCOV: 'gcov-${{ matrix.gcc }}'
-    continue-on-error: true
+    #strategy:
+    #  matrix:
+    #    include:
+    #      - gcc: 10
+    #        clang: 11
+    #      - gcc: 11
+    #        clang: 12
+    #      - gcc: 11
+    #        clang: 13
+    #env:
+    #  CXX: 'clang++-${{ matrix.clang }}'
+    #  CLANG_CXX: 'clang++-${{ matrix.clang }}'
+    #  GCC_CXX: 'g++-${{ matrix.gcc }}'
+    #  GCOV: 'gcov-${{ matrix.gcc }}'
+    #continue-on-error: true
     steps:
 #      - name: Prepare C toolchains
 #        run: >
@@ -142,18 +142,18 @@ jobs:
         run: |
           rustup toolchain add nightly --component llvm-tools-preview
           rustup override set nightly
-      - name: Configure cache
-        uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: >-
-            test-${{ runner.os }}-cargo-gcc-${{ matrix.gcc }}-clang-${{
-            matrix.clang }}-${{ hashFiles('**/Cargo.lock') }}
+      #- name: Configure cache
+      #  uses: actions/cache@v3
+      #  with:
+      #    path: |
+      #      ~/.cargo/bin/
+      #      ~/.cargo/registry/index/
+      #      ~/.cargo/registry/cache/
+      #      ~/.cargo/git/db/
+      #      target/
+      #    key: >-
+      #      test-${{ runner.os }}-cargo-gcc-${{ matrix.gcc }}-clang-${{
+      #      matrix.clang }}-${{ hashFiles('**/Cargo.lock') }}
       - name: Build
         env:
           RUSTFLAGS: '-Cinstrument-coverage'
