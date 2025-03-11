@@ -23,6 +23,25 @@ Log types:
 
 ### Security
 
+## [0.1.1](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.1) - 2025/03/11
+
+### Added
+
+### Changed
+
+- update crates version
+- pin all crates to enhance build
+
+### Fixed
+
+- specify duckdb-rs git rev for fixing linux build
+
+### Removed
+
+- ci matrix for test coverage
+
+### Security
+
 ## [0.1.0](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.0) - 2024/11/29
 
 ### Added

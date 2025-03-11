@@ -1,11 +1,11 @@
 [package]
 name = "lsof"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 
 [dependencies]
-chrono = "0.4.38"
-thiserror = "2.0.0"
+chrono = "=0.4.38"
+thiserror = "=2.0.12"
 
 [[example]]
 name = "list_open_file"

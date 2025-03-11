@@ -1,7 +1,7 @@
 name: ci
 'on':
   - pull_request
-  - push
+
 jobs:
   test-lib-linux:
     name: Test library On Linux
@@ -27,8 +27,7 @@ jobs:
           sudo apt-get install libpcap-dev
       - name: Setup Rust
         run: >
-          rustup toolchain add ${{ matrix.toolchain }} --component
-          llvm-tools-preview
+          rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
 
           rustup override set ${{ matrix.toolchain }}
       - name: Configure cache
@@ -65,8 +64,7 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup Rust
         run: >
-          rustup toolchain add ${{ matrix.toolchain }} --component
-          llvm-tools-preview
+          rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
 
           rustup override set ${{ matrix.toolchain }}
       - name: Configure cache
@@ -83,91 +81,10 @@ jobs:
             hashFiles('**/Cargo.lock') }}
       - name: Test
         run: cargo test --lib
-#  test-lib-windows:
-#   name: Test library On Windows
-#   runs-on: '${{ matrix.os }}'
-#   strategy:
-#     matrix:
-#       os:
-#         - windows-latest
-#       arch:
-#         - x86
-#         - x86_64
-#         - arm
-#         - aarch64
-#       toolchain:
-#         - stable
-#   continue-on-error: true
-#   steps:
-#     - name: Checkout repository
-#       uses: actions/checkout@v3
-#     - name: Setup Rust
-#       run: >
-#         rustup toolchain add ${{ matrix.toolchain }} --component
-#         llvm-tools-preview
-
-#         rustup override set ${{ matrix.toolchain }}
-#     - name: Configure cache
-#       uses: actions/cache@v3
-#       with:
-#         path: |
-#           ~/.cargo/bin/
-#           ~/.cargo/registry/index/
-#           ~/.cargo/registry/cache/
-#           ~/.cargo/git/db/
-#           target/
-#         key: >-
-#           test-${{ runner.os }}-cargo-${{ matrix.toolchain }}-${{
-#           hashFiles('**/Cargo.lock') }}
-#     - name: Test
-#       run: cargo test --lib
   test-coverage:
-    name: 'Test coverage (gcc-${{ matrix.gcc }}, clang-${{ matrix.clang }})'
+    name: 'Test coverage'
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        include:
-          - gcc: 10
-            clang: 11
-          - gcc: 11
-            clang: 12
-          - gcc: 11
-            clang: 13
-    env:
-      CXX: 'clang++-${{ matrix.clang }}'
-      CLANG_CXX: 'clang++-${{ matrix.clang }}'
-      GCC_CXX: 'g++-${{ matrix.gcc }}'
-      GCOV: 'gcov-${{ matrix.gcc }}'
-    continue-on-error: true
     steps:
-      - name: Prepare C toolchains
-        run: >
-          # Add LLVM keys
-
-          curl -o- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo apt-key add
-          -
-
-
-          # Add extra APT repos
-
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test
-
-          sudo add-apt-repository 'deb http://apt.llvm.org/focal/
-          llvm-toolchain-focal-11 main'
-
-          sudo add-apt-repository 'deb http://apt.llvm.org/focal/
-          llvm-toolchain-focal-12 main'
-
-          sudo add-apt-repository 'deb http://apt.llvm.org/focal/
-          llvm-toolchain-focal-13 main'
-
-
-          # Install toolchains
-
-          sudo apt-get update
-
-          sudo apt-get install -y clang-${{ matrix.clang }} g++-${{ matrix.gcc
-          }}
       - name: Install project prerequisites
         run: |
           sudo apt-get update
