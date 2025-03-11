@@ -23,18 +23,18 @@ Log types:
 
 ### Security
 
-## [0.1.1](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.1) - 2025/03/06
+## [0.1.1](https://github.com/VictorMeyer77/rstracer/releases/tag/0.1.1) - 2025/03/11
 
 ### Added
 
 ### Changed
 
-- update config crate version 
+- update crates version
+- pin all crates to enhance build
 
 ### Fixed
 
-- pin chrono to 0.4.39
-- pin duckdb to 1.1.1
+- specify duckdb-rs git rev for fixing linux build
 
 ### Removed
 
