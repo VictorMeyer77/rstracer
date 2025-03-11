@@ -108,7 +108,7 @@ format = "parquet"           # Output format, accepted "parquet" or "csv"
 #  - "HOURLY"
 #  - "DAILY"
 # Default is "HOURLY".
-[logger]
-level = "INFO"                # Logging level
-directory = "./.log"          # Output directory for log files
-rotation = "HOURLY"           # Log rotation policy
+#[logger]
+#level = "INFO"                # Logging level
+#directory = "./.log"          # Output directory for log files
+#rotation = "HOURLY"           # Log rotation policy
