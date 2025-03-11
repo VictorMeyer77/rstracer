@@ -24,11 +24,10 @@ jobs:
       - name: Install project prerequisites
         run: |
           sudo apt-get update
-          sudo apt-get install libpcap-dev libxcb-xfixes0-dev libxcb-shape0-dev
+          sudo apt-get install libpcap-dev
       - name: Setup Rust
         run: >
-          rustup toolchain add ${{ matrix.toolchain }} --component
-          llvm-tools-preview
+          rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
 
           rustup override set ${{ matrix.toolchain }}
       - name: Configure cache
@@ -65,8 +64,8 @@ jobs:
         uses: actions/checkout@v3
       - name: Setup Rust
         run: >
-          rustup toolchain add ${{ matrix.toolchain }} --component
-          llvm-tools-preview
+          rustup toolchain add ${{ matrix.toolchain }} --component llvm-tools-preview
+
           rustup override set ${{ matrix.toolchain }}
       - name: Configure cache
         uses: actions/cache@v3
