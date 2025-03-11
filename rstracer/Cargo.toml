@@ -4,21 +4,21 @@ version = "0.1.1"
 edition = "2021"
 
 [dependencies]
-chrono = "=0.4.39"
-config = "0.15.9"
+chrono = "=0.4.38"
+config = "=0.15.9"
 duckdb = { version = "=1.1.1", features = ["bundled"] }
 etc = { path = "../etc"}
-lazy_static = "1.5.0"
+lazy_static = "=1.5.0"
 lsof = { path = "../lsof"}
 network = { path = "../network"}
-pcap = "2.2.0"
-pnet = "0.35.0"
+pcap = "=2.2.0"
+pnet = "=0.35.0"
 ps = { path = "../ps"}
-regex = "1.11.1"
-serde = { version = "1.0.214", features = ["derive"] }
-thiserror = "2.0.0"
-tokio = { version = "1.39.2", features = ["full"] }
-tracing = "0.1"
-tracing-subscriber = "0.3.18"
-tracing-appender = "0.2.3"
-uuid = {version = "1.11.0", features = ["v4"] }
+regex = "=1.11.1"
+serde = { version = "=1.0.218", features = ["derive"] }
+thiserror = "=2.0.12"
+tokio = { version = "=1.44.0", features = ["full"] }
+tracing = "=0.1.41"
+tracing-subscriber = "=0.3.19"
+tracing-appender = "=0.2.3"
+uuid = {version = "=1.15.1", features = ["v4"] }

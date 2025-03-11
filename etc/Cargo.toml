@@ -6,9 +6,9 @@ categories = ["command-line-utilities"]
 description = "API for reading etc/ files (UNIX)"
 
 [dependencies]
-regex = "1.11.0"
-tempfile = "3.13.0"
-thiserror = "2.0.0"
+regex = "=1.11.1"
+tempfile = "=3.13.0"
+thiserror = "=2.0.12"
 
 [[example]]
 name = "read_hosts"
